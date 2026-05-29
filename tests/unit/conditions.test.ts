@@ -47,6 +47,14 @@ async function initCommittedReadme(dir: string): Promise<void> {
   await runGit(["commit", "-m", "initial commit"], dir);
 }
 
+async function initCommittedSite(dir: string): Promise<void> {
+  await runGit(["init", "-b", "main"], dir);
+  await fs.writeFile(path.join(dir, "README.md"), "# My Web Site\n");
+  await fs.writeFile(path.join(dir, "index.html"), "<!doctype html>\n<title>My Site</title>\n");
+  await runGit(["add", "README.md", "index.html"], dir);
+  await runGit(["commit", "-m", "initial site"], dir);
+}
+
 async function initConflictingBranches(dir: string): Promise<void> {
   await initCommittedReadme(dir);
   await fs.writeFile(path.join(dir, "README.md"), "# My Project\n## 説明\n初期行\n");
@@ -154,7 +162,7 @@ describe("conditions", () => {
   });
 
   it("returns no checks for chapters outside the lesson set", async () => {
-    await expect(evaluateChapterChecks(9, "/tmp", [], async () => "")).resolves.toEqual([]);
+    await expect(evaluateChapterChecks(10, "/tmp", [], async () => "")).resolves.toEqual([]);
   });
 
   it("marks chapter 3 README modification and diff actions", async () => {
@@ -284,6 +292,25 @@ describe("conditions", () => {
       ["ch8.conflictRaised", true],
       ["ch8.markersResolved", true],
       ["ch8.mergeCommit", true],
+    ]);
+  });
+
+  it("marks chapter 9 final practice state from git output and .gitignore", async () => {
+    const dir = await tempDir("claude-git-app-v5-condition-ch9");
+    await fs.writeFile(path.join(dir, ".gitignore"), "*.log\n");
+
+    const checks = await evaluateChapterChecks(9, dir, [], async (args) => {
+      if (args.join(" ") === "branch --list feature/login") return "  feature/login\n";
+      if (args.join(" ") === "ls-files login.html") return "login.html\n";
+      if (args.join(" ") === "rev-parse --abbrev-ref HEAD") return "main\n";
+      return "";
+    });
+
+    expect(checks.map((check) => [check.id, check.ok])).toEqual([
+      ["ch9.featureBranch", true],
+      ["ch9.loginCommitted", true],
+      ["ch9.gitignoreAdded", true],
+      ["ch9.mergedToMain", true],
     ]);
   });
 
@@ -470,5 +497,51 @@ describe("conditions", () => {
     expect(checkOk(resolved, "ch8.conflictRaised")).toBe(true);
     expect(checkOk(resolved, "ch8.markersResolved")).toBe(true);
     expect(checkOk(resolved, "ch8.mergeCommit")).toBe(true);
+  });
+
+  gitIt("evaluates chapter 9 feature branch workflow with real git", async () => {
+    const dir = await tempDir("claude-git-app-v5-real-ch9");
+    await initCommittedSite(dir);
+
+    const initial = await evaluateChapterChecks(9, dir, [], runGit);
+    expect(initial.map((check) => [check.id, check.ok])).toEqual([
+      ["ch9.featureBranch", false],
+      ["ch9.loginCommitted", false],
+      ["ch9.gitignoreAdded", false],
+      ["ch9.mergedToMain", false],
+    ]);
+
+    await runGit(["switch", "-c", "feature/login"], dir);
+    const branched = await evaluateChapterChecks(9, dir, [], runGit);
+    expect(checkOk(branched, "ch9.featureBranch")).toBe(true);
+    expect(checkOk(branched, "ch9.loginCommitted")).toBe(false);
+    expect(checkOk(branched, "ch9.gitignoreAdded")).toBe(false);
+    expect(checkOk(branched, "ch9.mergedToMain")).toBe(false);
+
+    await fs.writeFile(path.join(dir, "login.html"), "<title>Login</title>\n");
+    await fs.writeFile(path.join(dir, ".gitignore"), "*.log\n");
+    const filesCreated = await evaluateChapterChecks(9, dir, [], runGit);
+    expect(checkOk(filesCreated, "ch9.featureBranch")).toBe(true);
+    expect(checkOk(filesCreated, "ch9.loginCommitted")).toBe(false);
+    expect(checkOk(filesCreated, "ch9.gitignoreAdded")).toBe(true);
+    expect(checkOk(filesCreated, "ch9.mergedToMain")).toBe(false);
+
+    await runGit(["add", "login.html", ".gitignore"], dir);
+    await runGit(["commit", "-m", "add login page"], dir);
+    const committed = await evaluateChapterChecks(9, dir, [], runGit);
+    expect(checkOk(committed, "ch9.featureBranch")).toBe(true);
+    expect(checkOk(committed, "ch9.loginCommitted")).toBe(true);
+    expect(checkOk(committed, "ch9.gitignoreAdded")).toBe(true);
+    expect(checkOk(committed, "ch9.mergedToMain")).toBe(false);
+
+    await runGit(["switch", "main"], dir);
+    await runGit(["merge", "feature/login"], dir);
+    const merged = await evaluateChapterChecks(9, dir, ["git log --oneline"], runGit);
+    expect(merged.map((check) => [check.id, check.ok])).toEqual([
+      ["ch9.featureBranch", true],
+      ["ch9.loginCommitted", true],
+      ["ch9.gitignoreAdded", true],
+      ["ch9.mergedToMain", true],
+    ]);
   });
 });

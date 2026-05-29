@@ -105,6 +105,15 @@ async function initializeChapterSandbox(chapter: number, dir: string): Promise<v
     return;
   }
 
+  if (chapter === 9) {
+    await runGit(["init", "-b", "main"], dir);
+    await fs.writeFile(path.join(dir, "README.md"), "# My Web Site\n", "utf8");
+    await fs.writeFile(path.join(dir, "index.html"), "<!doctype html>\n<title>My Site</title>\n", "utf8");
+    await runGit(["add", "README.md", "index.html"], dir);
+    await runGit(["commit", "-m", "initial site"], dir);
+    return;
+  }
+
   await initializeCommittedReadme(dir);
 }
 

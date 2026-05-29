@@ -1,4 +1,4 @@
-export const TOTAL_CHAPTERS = 8;
+export const TOTAL_CHAPTERS = 9;
 
 export const ch1Conditions = [
   {
@@ -140,6 +140,29 @@ export const ch8Conditions = [
   {
     id: "ch8.mergeCommit",
     label: "マージコミットが作成されている",
+    kind: "state",
+  },
+];
+
+export const ch9Conditions = [
+  {
+    id: "ch9.featureBranch",
+    label: "feature/login ブランチがある",
+    kind: "state",
+  },
+  {
+    id: "ch9.loginCommitted",
+    label: "login.html が Git で追跡されている",
+    kind: "state",
+  },
+  {
+    id: "ch9.gitignoreAdded",
+    label: ".gitignore に *.log が書かれている",
+    kind: "state",
+  },
+  {
+    id: "ch9.mergedToMain",
+    label: "main に login.html が統合されている",
     kind: "state",
   },
 ];

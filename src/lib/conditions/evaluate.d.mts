@@ -8,6 +8,7 @@ export const ch5Conditions: Condition[];
 export const ch6Conditions: Condition[];
 export const ch7Conditions: Condition[];
 export const ch8Conditions: Condition[];
+export const ch9Conditions: Condition[];
 
 export function commandMatched(history: string[], command: string, subcommand: string): boolean;
 export function gitDiffStagedUsed(history: string[]): boolean;

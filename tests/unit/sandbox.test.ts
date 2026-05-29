@@ -74,4 +74,17 @@ describe("sandbox", () => {
     expect(state.files).toContain("README.md");
     expect(state.status).toBe("");
   });
+
+  it("seeds chapter 9 as a committed web site on main", async () => {
+    const dir = await resetChapterSandbox(9);
+    const state = await getChapterState(9);
+
+    await expect(fs.readFile(path.join(dir, "README.md"), "utf8")).resolves.toBe("# My Web Site\n");
+    await expect(fs.readFile(path.join(dir, "index.html"), "utf8")).resolves.toBe(
+      "<!doctype html>\n<title>My Site</title>\n",
+    );
+    expect(state.head).toBe("ref: refs/heads/main");
+    expect(state.files).toEqual(expect.arrayContaining(["README.md", "index.html"]));
+    expect(state.status).toBe("");
+  });
 });

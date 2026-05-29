@@ -9,6 +9,7 @@ import {
   ch6Conditions,
   ch7Conditions,
   ch8Conditions,
+  ch9Conditions,
 } from "./definitions.mjs";
 
 export {
@@ -20,6 +21,7 @@ export {
   ch6Conditions,
   ch7Conditions,
   ch8Conditions,
+  ch9Conditions,
 };
 
 async function exists(filePath) {
@@ -71,6 +73,11 @@ async function readText(filePath) {
 async function readmeHasConflictMarkers(dir) {
   const readme = await readText(path.join(dir, "README.md"));
   return readme.includes("<<<<<<<") || readme.includes("=======") || readme.includes(">>>>>>>");
+}
+
+async function gitignoreIncludesLogPattern(dir) {
+  const gitignore = await readText(path.join(dir, ".gitignore"));
+  return gitignore.split(/\r?\n/).some((line) => line.trim() === "*.log");
 }
 
 /**
@@ -191,6 +198,23 @@ export async function evaluateChapterChecks(chapter, dir, history = [], runGit) 
       { ...ch8Conditions[0], ok: mergeUsed },
       { ...ch8Conditions[1], ok: mergeUsed && !hasMarkers },
       { ...ch8Conditions[2], ok: parseCount(mergeCountText) >= 1 },
+    ];
+  }
+
+  if (chapter === 9) {
+    const [branchText, trackedLoginText, gitignoreHasLogPattern, headText] = await Promise.all([
+      runGit(["branch", "--list", "feature/login"], dir).catch(() => ""),
+      runGit(["ls-files", "login.html"], dir).catch(() => ""),
+      gitignoreIncludesLogPattern(dir),
+      runGit(["rev-parse", "--abbrev-ref", "HEAD"], dir).catch(() => ""),
+    ]);
+    const loginTracked = trackedLoginText.split(/\r?\n/).includes("login.html");
+
+    return [
+      { ...ch9Conditions[0], ok: branchText.trim().length > 0 },
+      { ...ch9Conditions[1], ok: loginTracked },
+      { ...ch9Conditions[2], ok: gitignoreHasLogPattern },
+      { ...ch9Conditions[3], ok: headText.trim() === "main" && loginTracked },
     ];
   }
 

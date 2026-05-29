@@ -711,6 +711,124 @@ export const lessons: Lesson[] = [
       },
     ],
   },
+  {
+    id: 9,
+    title: "実践演習: 機能開発の一連の流れ",
+    oneLiner: "作業ブランチでログイン機能を作り、main に統合する。",
+    intro:
+      "章9は実プロジェクト風の状態から始めます。README.md と index.html が main にコミット済みです。ログイン機能を作業ブランチで開発し、main に統合する実務の流れを体験します。",
+    estimatedMinutes: 12,
+    sections: [
+      { kind: "heading", text: "これまでの技術をつなげる" },
+      {
+        kind: "paragraph",
+        text: "ここまでは Git の道具を1つずつ練習してきました。章9では、それらを実務の1本の流れとして組み合わせます。料理で包丁、火加減、盛り付けを別々に練習したあと、1皿を最後まで作る練習に近いです。",
+      },
+      {
+        kind: "list",
+        items: [
+          "ブランチを切る: 章4で練習した、作業場所を分ける操作です。",
+          "コミットする: 章2で練習した、変更の写真を履歴に残す操作です。",
+          ".gitignore を使う: 章7で練習した、ログや秘密ファイルを履歴から外すルールです。",
+          "main にマージする: 章5・章8で練習した、別ブランチの変更を取り込む操作です。",
+        ],
+      },
+      { kind: "heading", text: "機能ブランチとは" },
+      {
+        kind: "paragraph",
+        text: "main は完成品を並べる棚、feature/login は作業机だと考えると分かりやすいです。作業机では途中の部品を広げてもよく、完成したら棚に戻します。main をいつも使える状態に保つために、機能ごとに作業場所を分けます。",
+      },
+      {
+        kind: "diagram",
+        caption: "feature/login を作って main に戻す流れ",
+        ascii: [
+          "main:          initial site",
+          "                 │",
+          "                 ├─ feature/login: add login page",
+          "                 │",
+          "                 ▼",
+          "main:          initial site ── add login page",
+        ].join("\n"),
+      },
+      {
+        kind: "callout",
+        tone: "tip",
+        title: "なぜ機能ごとにブランチを分けるか",
+        body: "複数人で同時に作業しやすくなり、レビューもしやすくなります。途中でログイン機能が壊れていても、main まで壊さずに済みます。",
+      },
+      {
+        kind: "callout",
+        tone: "warn",
+        title: "ログや秘密ファイルは先に除外する",
+        body: "`*.log` や `.env` のようなファイルは、コミット前に .gitignore へ書きます。一度履歴に入れると、あとから消したつもりでも過去のコミットに残ることがあります。",
+      },
+      { kind: "heading", text: "今回の初期状態" },
+      {
+        kind: "paragraph",
+        text: "サンドボックスには main ブランチがあり、README.md と index.html が `initial site` というコミットで保存されています。作業ツリーは clean なので、すぐに新しい機能ブランチを切れます。",
+      },
+      {
+        kind: "code",
+        caption: "初期状態のイメージ",
+        lines: [
+          "$ git log --oneline",
+          "a1b2c3d initial site",
+          "$ git status",
+          "On branch main",
+          "nothing to commit, working tree clean",
+        ],
+      },
+      { kind: "heading", text: "実務の一連のコマンド" },
+      {
+        kind: "code",
+        caption: "ログイン機能を作って main に統合する",
+        lines: [
+          "$ git switch -c feature/login",
+          "$ echo \"<title>Login</title>\" > login.html",
+          "$ echo \"*.log\" > .gitignore",
+          "$ git add login.html .gitignore",
+          "$ git commit -m \"add login page\"",
+          "$ git switch main",
+          "$ git merge feature/login",
+          "$ git log --oneline",
+        ],
+      },
+      {
+        kind: "walkthrough",
+        heading: "練習問題でやること",
+        steps: [
+          {
+            label: "1. `git switch -c feature/login` を打つ",
+            why: "ログイン機能用の作業机を作ります。main から直接作業せず、機能ごとに変更をまとめられるようにします。",
+          },
+          {
+            label: "2. `echo \"<title>Login</title>\" > login.html` でページを作る",
+            why: "今回の機能本体です。新しいファイルを作ると、Git からはまだ未追跡のファイルとして見えます。",
+          },
+          {
+            label: "3. `echo \"*.log\" > .gitignore` でログを除外する",
+            why: "開発中に debug.log のようなログができても、コミット対象に混ざらないようにします。成果物と作業中のゴミを分けるためです。",
+          },
+          {
+            label: "4. `git add login.html .gitignore` してコミットする",
+            why: "ログインページと除外ルールを同じ機能の変更として履歴に残します。`git commit -m \"add login page\"` で写真を1枚撮ります。",
+          },
+          {
+            label: "5. `git switch main` で本道に戻る",
+            why: "完成した機能は main に取り込みます。取り込む側のブランチに移動してから merge するのが Git の基本です。",
+          },
+          {
+            label: "6. `git merge feature/login` で統合する",
+            why: "feature/login にあるログイン機能のコミットを main に入れます。今回は main 側に別変更がないので、fast-forward で進むことがあります。",
+          },
+          {
+            label: "7. `git log --oneline` で履歴を見る",
+            why: "main の履歴に `add login page` が入ったことを確認します。実務では最後に、目的の変更が main に入ったかを必ず目で確認します。",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getLesson(chapter: number): Lesson | undefined {

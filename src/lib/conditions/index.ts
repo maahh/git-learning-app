@@ -7,6 +7,7 @@ import {
   ch6Conditions,
   ch7Conditions,
   ch8Conditions,
+  ch9Conditions,
 } from "./definitions.mjs";
 import type { Condition } from "./types";
 
@@ -19,6 +20,7 @@ export const conditionsByChapter: Record<number, Condition[]> = {
   6: ch6Conditions,
   7: ch7Conditions,
   8: ch8Conditions,
+  9: ch9Conditions,
 };
 
 export function getConditions(chapter: number): Condition[] {
