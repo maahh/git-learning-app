@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { drills, TOTAL_DRILLS } from "../../src/content/drills.mjs";
 import { evaluateDrillChecks } from "../../src/lib/conditions/evaluate.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -60,6 +61,17 @@ async function drillOk(id: number, dir: string, history: string[] = []): Promise
 }
 
 describe("drill conditions", () => {
+  it("all drills have on-demand hint and answer content", () => {
+    expect(drills).toHaveLength(TOTAL_DRILLS);
+    for (const drill of drills) {
+      expect(drill.hint.trim().length, `drill ${drill.id} hint`).toBeGreaterThan(0);
+      expect(drill.answer.length, `drill ${drill.id} answer`).toBeGreaterThan(0);
+      for (const command of drill.answer) {
+        expect(command.trim().length, `drill ${drill.id} answer command`).toBeGreaterThan(0);
+      }
+    }
+  });
+
   gitIt("drill 1 detects first README commit", async () => {
     const dir = await tempDir("claude-git-app-v5-drill1");
     expect(await drillOk(1, dir)).toMatchObject({

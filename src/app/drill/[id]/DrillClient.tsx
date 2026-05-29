@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ConditionChecklist from "@/components/ConditionChecklist";
+import FileStatePanel from "@/components/FileStatePanel";
 import Terminal, { type TerminalHandle } from "@/components/Terminal";
 import { getDrill, TOTAL_DRILLS } from "@/content/drills.mjs";
 import { getDrillConditions } from "@/lib/conditions";
 import type { ConditionCheck } from "@/lib/conditions/types";
+import type { FileState } from "@/lib/fileStates.mjs";
 import { markDrillCompleted, setLastDrill } from "@/lib/progress";
 
 type DrillState = {
@@ -13,6 +15,7 @@ type DrillState = {
   id: number;
   drill: number;
   files: string[];
+  fileStates: FileState[];
   head: string | null;
   status: string;
   checks: ConditionCheck[];
@@ -46,6 +49,8 @@ export default function DrillClient({ drill }: DrillClientProps) {
   const [state, setState] = useState<DrillState | null>(null);
   const [terminalMountKey, setTerminalMountKey] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
 
   const fallbackChecks = useMemo<ConditionCheck[]>(
     () => getDrillConditions(drill).map((condition) => ({ ...condition, ok: false })),
@@ -117,6 +122,24 @@ export default function DrillClient({ drill }: DrillClientProps) {
     void loadState();
   }, [loadState]);
 
+  const handleAnswerToggle = useCallback(() => {
+    if (showAnswer) {
+      setShowAnswer(false);
+      return;
+    }
+    if (window.confirm("解答を表示しますか？")) {
+      setShowAnswer(true);
+    }
+  }, [showAnswer]);
+
+  const handleCopyCommand = useCallback(async (command: string) => {
+    try {
+      await navigator.clipboard.writeText(command);
+    } catch {
+      // Clipboard availability depends on browser permissions.
+    }
+  }, []);
+
   return (
     <main className="grid min-h-screen grid-cols-1 bg-bg text-text lg:grid-cols-[320px_minmax(0,1fr)_340px]">
       <aside className="border-b border-border bg-panel px-5 py-5 lg:border-b-0 lg:border-r">
@@ -131,6 +154,51 @@ export default function DrillClient({ drill }: DrillClientProps) {
         <p className="mt-6 font-mono text-sm text-accent">Drill {drill}</p>
         <h1 className="mt-2 text-2xl font-semibold">{drillContent?.title ?? `ドリル${drill}`}</h1>
         <p className="mt-3 text-sm leading-6 text-textMuted">{drillContent?.prompt}</p>
+
+        <div className="mt-5 space-y-3">
+          <section className="rounded-md border border-border bg-bg p-3" aria-label="ヒント">
+            <button
+              className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-accent transition hover:text-success"
+              type="button"
+              onClick={() => setShowHint((value) => !value)}
+              aria-expanded={showHint}
+            >
+              <span>ヒント</span>
+              <span className="font-mono text-xs text-textMuted">{showHint ? "close" : "open"}</span>
+            </button>
+            {showHint ? <p className="mt-3 text-sm leading-6 text-textMuted">{drillContent?.hint}</p> : null}
+          </section>
+
+          <section className="rounded-md border border-border bg-bg p-3" aria-label="回答">
+            <button
+              className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-accent transition hover:text-success"
+              type="button"
+              onClick={handleAnswerToggle}
+              aria-expanded={showAnswer}
+            >
+              <span>答えを見る</span>
+              <span className="font-mono text-xs text-textMuted">{showAnswer ? "close" : "open"}</span>
+            </button>
+            {showAnswer ? (
+              <ol className="mt-3 space-y-2">
+                {(drillContent?.answer ?? []).map((command, index) => (
+                  <li key={`${index}:${command}`} className="flex min-w-0 items-center gap-2">
+                    <code className="min-w-0 flex-1 overflow-auto rounded border border-border bg-panel px-2 py-1.5 font-mono text-xs leading-5 text-text">
+                      {command}
+                    </code>
+                    <button
+                      className="shrink-0 rounded-md border border-accent/50 px-2 py-1 text-xs font-semibold text-accent transition hover:bg-accent/10"
+                      type="button"
+                      onClick={() => void handleCopyCommand(command)}
+                    >
+                      コピー
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </section>
+        </div>
 
         <section className="mt-6" aria-label="達成条件">
           <h2 className="text-sm font-semibold text-text">達成条件</h2>
@@ -192,9 +260,7 @@ export default function DrillClient({ drill }: DrillClientProps) {
         <div className="mt-5 space-y-5">
           <section aria-label="ファイル一覧">
             <h3 className="font-mono text-xs uppercase text-textMuted">Files</h3>
-            <pre className="mt-2 min-h-24 overflow-auto rounded-md border border-border bg-bg p-3 font-mono text-xs leading-5 text-text">
-              {state?.files.length ? state.files.join("\n") : "(empty)"}
-            </pre>
+            <FileStatePanel fileStates={state?.fileStates ?? []} />
           </section>
 
           <section aria-label="Git HEAD">

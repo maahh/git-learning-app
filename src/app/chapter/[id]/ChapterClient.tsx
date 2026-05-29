@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ConditionChecklist from "@/components/ConditionChecklist";
+import FileStatePanel from "@/components/FileStatePanel";
 import Terminal, { type TerminalHandle } from "@/components/Terminal";
 import { getLesson } from "@/content/lessons";
 import { getConditions } from "@/lib/conditions";
 import { TOTAL_CHAPTERS } from "@/lib/conditions/definitions.mjs";
 import type { ConditionCheck } from "@/lib/conditions/types";
+import type { FileState } from "@/lib/fileStates.mjs";
 import { markChapterCompleted, setLastChapter } from "@/lib/progress";
 
 type ChapterState = {
   chapter: number;
   files: string[];
+  fileStates: FileState[];
   head: string | null;
   status: string;
   checks: ConditionCheck[];
@@ -208,9 +211,7 @@ export default function ChapterClient({ chapter }: ChapterClientProps) {
         <div className="mt-5 space-y-5">
           <section aria-label="ファイル一覧">
             <h3 className="font-mono text-xs uppercase text-textMuted">Files</h3>
-            <pre className="mt-2 min-h-24 overflow-auto rounded-md border border-border bg-bg p-3 font-mono text-xs leading-5 text-text">
-              {state?.files.length ? state.files.join("\n") : "(empty)"}
-            </pre>
+            <FileStatePanel fileStates={state?.fileStates ?? []} />
           </section>
 
           <section aria-label="Git HEAD">

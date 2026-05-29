@@ -6,6 +6,8 @@ export type Drill = {
   id: number;
   title: string;
   prompt: string;
+  hint: string;
+  answer: string[];
   conditions: Condition[];
 };
 

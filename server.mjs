@@ -12,6 +12,7 @@ import { WebSocketServer } from "ws";
 import { TOTAL_CHAPTERS } from "./src/lib/conditions/definitions.mjs";
 import { TOTAL_DRILLS } from "./src/content/drills.mjs";
 import { evaluateChapterChecks, evaluateDrillChecks } from "./src/lib/conditions/evaluate.mjs";
+import { buildFileStates } from "./src/lib/fileStates.mjs";
 
 const require = createRequire(import.meta.url);
 
@@ -423,6 +424,24 @@ async function gitStatus(dir) {
   }
 }
 
+async function gitStatusWithIgnored(dir) {
+  try {
+    const { stdout } = await execFileAsync("git", ["status", "--porcelain", "--ignored"], {
+      cwd: dir,
+      timeout: 5000,
+      env: gitEnv(),
+    });
+    return stdout;
+  } catch {
+    return "";
+  }
+}
+
+async function gitTrackedFiles(dir) {
+  const output = await gitOutput(dir, ["ls-files"]);
+  return output.split(/\r?\n/).filter(Boolean);
+}
+
 async function gitOutput(dir, args) {
   try {
     const { stdout } = await execFileAsync("git", args, {
@@ -455,14 +474,17 @@ async function stateForChapter(chapter, history = []) {
 
 async function stateForTrack(target, history = []) {
   const dir = await ensureTrackSandbox(target);
-  const [files, head, status, checks] = await Promise.all([
+  const [files, head, status, statusWithIgnored, trackedFiles, checks] = await Promise.all([
     listFiles(dir),
     readHead(dir),
     gitStatus(dir),
+    gitStatusWithIgnored(dir),
+    gitTrackedFiles(dir),
     target.track === "chapter"
       ? evaluateChapterChecks(target.id, dir, history, runGit)
       : evaluateDrillChecks(target.id, dir, history, runGit),
   ]);
+  const fileStates = buildFileStates(statusWithIgnored, trackedFiles);
 
   return {
     track: target.track,
@@ -470,6 +492,7 @@ async function stateForTrack(target, history = []) {
     ...(target.track === "chapter" ? { chapter: target.id } : { drill: target.id }),
     sandboxPath: dir,
     files,
+    fileStates,
     head,
     status,
     checks,
