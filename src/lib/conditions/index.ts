@@ -10,6 +10,7 @@ import {
   ch9Conditions,
 } from "./definitions.mjs";
 import type { Condition } from "./types";
+import { drills } from "@/content/drills.mjs";
 
 export const conditionsByChapter: Record<number, Condition[]> = {
   1: ch1Conditions,
@@ -25,4 +26,8 @@ export const conditionsByChapter: Record<number, Condition[]> = {
 
 export function getConditions(chapter: number): Condition[] {
   return conditionsByChapter[chapter] ?? [];
+}
+
+export function getDrillConditions(id: number): Condition[] {
+  return drills.find((drill) => drill.id === id)?.conditions ?? [];
 }

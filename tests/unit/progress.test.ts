@@ -3,9 +3,11 @@ import {
   isValidProgress,
   loadProgress,
   markChapterCompleted,
+  markDrillCompleted,
   progressKey,
   saveProgress,
   setLastChapter,
+  setLastDrill,
 } from "../../src/lib/progress";
 
 function memoryStorage(initial?: string) {
@@ -26,6 +28,15 @@ function memoryStorage(initial?: string) {
 describe("progress", () => {
   it("accepts valid progress", () => {
     expect(isValidProgress({ version: 1, completed: [1], lastChapter: 2 })).toBe(true);
+    expect(
+      isValidProgress({
+        version: 1,
+        completed: [1],
+        lastChapter: 2,
+        drillCompleted: [3],
+        lastDrill: 3,
+      }),
+    ).toBe(true);
   });
 
   it("rejects invalid progress", () => {
@@ -39,9 +50,18 @@ describe("progress", () => {
 
   it("saves and loads progress", () => {
     const storage = memoryStorage();
-    saveProgress({ version: 1, completed: [2], lastChapter: 2 }, storage);
+    saveProgress(
+      { version: 1, completed: [2], lastChapter: 2, drillCompleted: [4], lastDrill: 4 },
+      storage,
+    );
 
-    expect(loadProgress(storage)).toEqual({ version: 1, completed: [2], lastChapter: 2 });
+    expect(loadProgress(storage)).toEqual({
+      version: 1,
+      completed: [2],
+      lastChapter: 2,
+      drillCompleted: [4],
+      lastDrill: 4,
+    });
   });
 
   it("marks completion once and keeps chapters sorted", () => {
@@ -58,5 +78,22 @@ describe("progress", () => {
     setLastChapter(2, storage);
 
     expect(loadProgress(storage).lastChapter).toBe(2);
+  });
+
+  it("marks drill completion and stores last drill", () => {
+    const storage = memoryStorage();
+    markDrillCompleted(2, storage);
+    markDrillCompleted(1, storage);
+    markDrillCompleted(2, storage);
+
+    expect(loadProgress(storage).drillCompleted).toEqual([1, 2]);
+    expect(loadProgress(storage).lastDrill).toBe(2);
+  });
+
+  it("stores last drill", () => {
+    const storage = memoryStorage();
+    setLastDrill(3, storage);
+
+    expect(loadProgress(storage).lastDrill).toBe(3);
   });
 });

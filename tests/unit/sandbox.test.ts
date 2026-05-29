@@ -4,10 +4,15 @@ import { describe, expect, it } from "vitest";
 import {
   chapterSandboxPath,
   ensureChapterSandbox,
+  ensureTrackSandbox,
   getChapterState,
+  getTrackState,
   listSandboxFiles,
   parseChapter,
+  parseDrill,
   resetChapterSandbox,
+  resetTrackSandbox,
+  trackSandboxPath,
 } from "../../src/lib/sandbox";
 
 describe("sandbox", () => {
@@ -43,6 +48,15 @@ describe("sandbox", () => {
   it("rejects invalid chapter values", () => {
     expect(() => parseChapter("0")).toThrow("chapter must be an integer");
     expect(() => parseChapter("abc")).toThrow("chapter must be an integer");
+  });
+
+  it("creates deterministic drill sandbox directories", async () => {
+    const target = { track: "drill" as const, id: 1 };
+    const dir = await resetTrackSandbox(target);
+
+    expect(parseDrill("1")).toBe(1);
+    expect(dir).toBe(trackSandboxPath(target));
+    await expect(fs.access(dir)).resolves.toBeUndefined();
   });
 
   it("seeds chapter 2 with a real git repository and README", async () => {
@@ -85,6 +99,39 @@ describe("sandbox", () => {
     );
     expect(state.head).toBe("ref: refs/heads/main");
     expect(state.files).toEqual(expect.arrayContaining(["README.md", "index.html"]));
+    expect(state.status).toBe("");
+  });
+
+  it("seeds drill 2 with three untracked files in a real repository", async () => {
+    const target = { track: "drill" as const, id: 2 };
+    const dir = await resetTrackSandbox(target);
+    const state = await getTrackState(target);
+
+    await ensureTrackSandbox(target);
+    await expect(fs.access(path.join(dir, ".git", "HEAD"))).resolves.toBeUndefined();
+    expect(state.files).toEqual(["a.txt", "b.txt", "c.txt"]);
+    expect(state.status).toContain("?? a.txt");
+  });
+
+  it("seeds drill 12 on main with a feature branch ready to conflict", async () => {
+    const target = { track: "drill" as const, id: 12 };
+    await resetTrackSandbox(target);
+    const state = await getTrackState(target);
+
+    expect(state.head).toBe("ref: refs/heads/main");
+    expect(state.files).toContain("README.md");
+    expect(state.status).toBe("");
+  });
+
+  it("seeds drill 20 as a committed app on main", async () => {
+    const target = { track: "drill" as const, id: 20 };
+    await resetTrackSandbox(target);
+    const dir = await ensureTrackSandbox(target);
+    const state = await getTrackState(target);
+
+    await expect(fs.readFile(path.join(dir, "src", "app.js"), "utf8")).resolves.toContain("app");
+    expect(state.head).toBe("ref: refs/heads/main");
+    expect(state.files).toEqual(expect.arrayContaining(["README.md", "src/app.js"]));
     expect(state.status).toBe("");
   });
 });

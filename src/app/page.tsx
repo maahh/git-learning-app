@@ -48,6 +48,22 @@ export default function HomePage() {
             ) : null,
           )}
         </section>
+
+        <section className="border-t border-border pt-6" aria-label="実践ドリル">
+          <div className="rounded-lg border border-border bg-panel p-5">
+            <p className="font-mono text-sm text-accent">Practice Drill</p>
+            <h2 className="mt-2 text-xl font-semibold">実践ドリル（20問）</h2>
+            <p className="mt-3 text-sm leading-6 text-textMuted">
+              Chapter とは別枠の、解説なしで手を動かす Git 操作ノックです。
+            </p>
+            <a
+              href="/drill"
+              className="mt-5 inline-flex rounded-md border border-accent/50 bg-accent px-3 py-2 text-sm font-semibold text-bg transition hover:bg-success"
+            >
+              実践ドリルへ
+            </a>
+          </div>
+        </section>
       </div>
     </main>
   );

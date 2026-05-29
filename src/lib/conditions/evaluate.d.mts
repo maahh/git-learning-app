@@ -19,3 +19,10 @@ export function evaluateChapterChecks(
   history: string[],
   runGit: (args: string[], cwd: string) => Promise<string>,
 ): Promise<ConditionCheck[]>;
+
+export function evaluateDrillChecks(
+  id: number,
+  dir: string,
+  history: string[],
+  runGit: (args: string[], cwd: string) => Promise<string>,
+): Promise<ConditionCheck[]>;

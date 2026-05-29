@@ -5,7 +5,10 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import type { ConditionCheck } from "@/lib/conditions/types";
 
 type TerminalProps = {
-  chapter: number;
+  chapter?: number;
+  track?: "chapter" | "drill";
+  id?: number;
+  wsQuery?: string;
   mountKey: number;
   onChecks?: (checks: ConditionCheck[]) => void;
   onResetDone?: () => void;
@@ -17,14 +20,14 @@ export type TerminalHandle = {
 
 type ConnectionStatus = "connecting" | "connected" | "closed" | "error";
 
-function websocketUrl(chapter: number): string {
+function websocketUrl(query: string): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = window.location.host || "localhost:3000";
-  return `${protocol}//${host}/pty?chapter=${chapter}`;
+  return `${protocol}//${host}/pty?${query}`;
 }
 
 const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
-  { chapter, mountKey, onChecks, onResetDone },
+  { chapter, track = "chapter", id, wsQuery, mountKey, onChecks, onResetDone },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -38,6 +41,11 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
   const onResetDoneRef = useRef(onResetDone);
   onChecksRef.current = onChecks;
   onResetDoneRef.current = onResetDone;
+  const query =
+    wsQuery ??
+    (track === "drill"
+      ? `track=drill&id=${id ?? chapter ?? 1}`
+      : `chapter=${chapter ?? id ?? 1}`);
 
   useImperativeHandle(
     ref,
@@ -94,7 +102,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
       fitAddon.fit();
       term.focus();
 
-      const socket = new WebSocket(websocketUrl(chapter));
+      const socket = new WebSocket(websocketUrl(query));
       socketRef.current = socket;
 
       const sendResize = () => {
@@ -170,7 +178,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal(
       disposed = true;
       cleanup?.();
     };
-  }, [chapter, mountKey]);
+  }, [mountKey, query]);
 
   const statusLabel =
     connectionStatus === "connected"
