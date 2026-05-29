@@ -132,12 +132,41 @@ export default function DrillClient({ drill }: DrillClientProps) {
     }
   }, [showAnswer]);
 
-  const handleCopyCommand = useCallback(async (command: string) => {
+  // コピー結果を行ごとに表示するための状態。"copied" / "error" を一定時間だけ保持する。
+  const [copyStatus, setCopyStatus] = useState<Record<number, "copied" | "error">>({});
+  const copyTimers = useRef<Record<number, number>>({});
+
+  const handleCopyCommand = useCallback(async (command: string, index: number) => {
+    let ok = false;
     try {
-      await navigator.clipboard.writeText(command);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(command);
+        ok = true;
+      } else {
+        // clipboard API が使えない環境向けのフォールバック（execCommand）。
+        const textarea = document.createElement("textarea");
+        textarea.value = command;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
     } catch {
-      // Clipboard availability depends on browser permissions.
+      ok = false;
     }
+    setCopyStatus((current) => ({ ...current, [index]: ok ? "copied" : "error" }));
+    if (copyTimers.current[index]) {
+      window.clearTimeout(copyTimers.current[index]);
+    }
+    copyTimers.current[index] = window.setTimeout(() => {
+      setCopyStatus((current) => {
+        const next = { ...current };
+        delete next[index];
+        return next;
+      });
+    }, 1500);
   }, []);
 
   return (
@@ -187,11 +216,22 @@ export default function DrillClient({ drill }: DrillClientProps) {
                       {command}
                     </code>
                     <button
-                      className="shrink-0 rounded-md border border-accent/50 px-2 py-1 text-xs font-semibold text-accent transition hover:bg-accent/10"
+                      className={`shrink-0 rounded-md border px-2 py-1 text-xs font-semibold transition ${
+                        copyStatus[index] === "copied"
+                          ? "border-success/60 bg-success/10 text-success"
+                          : copyStatus[index] === "error"
+                            ? "border-danger/60 bg-danger/10 text-danger"
+                            : "border-accent/50 text-accent hover:bg-accent/10"
+                      }`}
                       type="button"
-                      onClick={() => void handleCopyCommand(command)}
+                      onClick={() => void handleCopyCommand(command, index)}
+                      aria-live="polite"
                     >
-                      コピー
+                      {copyStatus[index] === "copied"
+                        ? "✓ コピーしました"
+                        : copyStatus[index] === "error"
+                          ? "コピー失敗"
+                          : "コピー"}
                     </button>
                   </li>
                 ))}
