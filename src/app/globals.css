@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #060807;
+  color: #e7f3ea;
+  font-family:
+    Inter,
+    "Noto Sans JP",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Hiragino Kaku Gothic ProN",
+    sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.xterm {
+  height: 100%;
+}
+
+.xterm-viewport {
+  overflow-y: auto;
+}
+
+.xterm-screen,
+.xterm-helpers,
+.xterm-text-layer,
+.xterm-selection-layer,
+.xterm-link-layer,
+.xterm-cursor-layer {
+  width: 100%;
+}
+
+@keyframes completeToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}

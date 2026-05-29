@@ -1,0 +1,38 @@
+{
+  "name": "claude-git-app-v5",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-only Git learning app using a real bash pty and host git. Do not expose publicly.",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "NEXT_TELEMETRY_DISABLED=1 next build",
+    "start": "NODE_ENV=production node server.mjs",
+    "lint": "eslint src tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "next": "^15.5.16",
+    "node-pty": "^1.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.5.13",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.0.0",
+    "happy-dom": "^15.11.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^2.1.0"
+  }
+}
