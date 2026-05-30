@@ -76,6 +76,20 @@ async function drillOk(id: number, dir: string, history: string[] = []): Promise
   return okMap(await evaluateDrillChecks(id, dir, history, runGit));
 }
 
+async function initializeExtra(id: number, dir: string): Promise<void> {
+  const initialized = await initializeExtraDrillSandbox(id, dir, (args) => runGit(args, dir));
+  expect(initialized).toBe(true);
+}
+
+async function runDrillAnswer(id: number, dir: string): Promise<string[]> {
+  const drill = drills.find((item) => item.id === id);
+  expect(drill).toBeDefined();
+  for (const command of drill!.answer) {
+    await runShell(command, dir);
+  }
+  return drill!.answer;
+}
+
 describe("drill conditions", () => {
   it("all drills have on-demand hint and answer content", () => {
     expect(drills).toHaveLength(TOTAL_DRILLS);
@@ -286,4 +300,100 @@ describe("drill conditions", () => {
       expect(after).toEqual(Object.fromEntries(Object.keys(after).map((key) => [key, true])));
     });
   }
+
+  for (const id of [21, 28, 49, 63, 74, 76, 86, 99]) {
+    gitIt(`drill ${id} new practical scenario is false before answer and true after`, async () => {
+      const dir = await tempDir(`claude-git-app-v5-new-drill${id}`);
+      await initializeExtra(id, dir);
+
+      const before = await drillOk(id, dir);
+      expect(Object.values(before).some((ok) => !ok)).toBe(true);
+
+      const history = await runDrillAnswer(id, dir);
+      const after = await drillOk(id, dir, history);
+      expect(after).toEqual(Object.fromEntries(Object.keys(after).map((key) => [key, true])));
+    });
+  }
+
+  gitIt("extra mergeCommit only accepts a merge commit that introduced feature into main", async () => {
+    const dir = await tempDir("claude-git-app-v5-strict-merge");
+    await initializeExtra(57, dir);
+
+    await runGit(["switch", "-c", "other"], dir);
+    await fs.writeFile(path.join(dir, "other.txt"), "other\n", "utf8");
+    await commitAll(dir, "other work");
+    await runGit(["switch", "main"], dir);
+    await fs.writeFile(path.join(dir, "main.txt"), "main\n", "utf8");
+    await commitAll(dir, "main work");
+    await runGit(["merge", "--no-ff", "other", "-m", "merge other"], dir);
+
+    expect(await drillOk(57, dir)).toMatchObject({
+      "drill57.onMain": true,
+      "drill57.mergeCommit": false,
+    });
+
+    await runGit(["merge", "--no-ff", "feature", "-m", "merge feature"], dir);
+
+    expect(await drillOk(57, dir)).toMatchObject({
+      "drill57.onMain": true,
+      "drill57.mergeCommit": true,
+    });
+  });
+
+  gitIt("annotated tag drills reject lightweight tags", async () => {
+    const dir90 = await tempDir("claude-git-app-v5-annotated90");
+    await initReadme(dir90);
+    await runGit(["tag", "v1.1.0"], dir90);
+    expect(await drillOk(90, dir90, ["git tag v1.1.0"])).toMatchObject({
+      "drill90.tagExists": false,
+      "drill90.annotatedTagUsed": false,
+    });
+    await runGit(["tag", "-d", "v1.1.0"], dir90);
+    await runGit(["tag", "-a", "v1.1.0", "-m", "release v1.1.0"], dir90);
+    expect(await drillOk(90, dir90, ["git tag -a v1.1.0 -m \"release v1.1.0\""])).toMatchObject({
+      "drill90.tagExists": true,
+      "drill90.annotatedTagUsed": true,
+    });
+
+    const dir100 = await tempDir("claude-git-app-v5-annotated100");
+    await initReadme(dir100);
+    await runGit(["tag", "v1.0.0"], dir100);
+    expect(await drillOk(100, dir100)).toMatchObject({ "drill100.tagExists": false });
+  });
+
+  gitIt("revert drills require a Revert commit and the target change removed", async () => {
+    const false71 = await tempDir("claude-git-app-v5-revert71-false");
+    await initializeExtra(71, false71);
+    await runGit(["rm", "bad.txt"], false71);
+    await runGit(["commit", "-m", "remove bad"], false71);
+    expect(await drillOk(71, false71)).toMatchObject({
+      "drill71.badGone": true,
+      "drill71.revertCommit": false,
+    });
+
+    const true71 = await tempDir("claude-git-app-v5-revert71-true");
+    await initializeExtra(71, true71);
+    await runGit(["revert", "HEAD", "--no-edit"], true71);
+    expect(await drillOk(71, true71)).toMatchObject({
+      "drill71.badGone": true,
+      "drill71.revertCommit": true,
+    });
+
+    const false72 = await tempDir("claude-git-app-v5-revert72-false");
+    await initializeExtra(72, false72);
+    await runGit(["rm", "old-bug.txt"], false72);
+    await runGit(["commit", "-m", "remove old bug"], false72);
+    expect(await drillOk(72, false72)).toMatchObject({
+      "drill72.oldGone": true,
+      "drill72.revertCommit": false,
+    });
+
+    const true72 = await tempDir("claude-git-app-v5-revert72-true");
+    await initializeExtra(72, true72);
+    await runGit(["revert", "HEAD~1", "--no-edit"], true72);
+    expect(await drillOk(72, true72)).toMatchObject({
+      "drill72.oldGone": true,
+      "drill72.revertCommit": true,
+    });
+  });
 });

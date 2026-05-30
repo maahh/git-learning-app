@@ -13,7 +13,7 @@ function lines(text) {
 function hasCommand(history, parts) {
   return history.some((entry) => {
     const tokens = entry.trim().split(/\s+/);
-    return parts.every((part, index) => tokens[index] === part || tokens.includes(part));
+    return parts.every((part, index) => tokens[index] === part);
   });
 }
 
@@ -72,13 +72,28 @@ async function common(dir, runGit) {
     headDiff: () => git(["diff", "HEAD", "--name-only"]).then(lines),
     branch: (name) => git(["branch", "--list", name]).then((text) => text.trim().length > 0),
     tag: (name) => git(["tag", "--list", name]).then((text) => lines(text).includes(name)),
+    tagType: (name) => git(["cat-file", "-t", name]).then((text) => text.trim()),
+    ref: (name) => git(["rev-parse", "--verify", name]).then((text) => text.trim()),
     ahead: (base, branch) => git(["rev-list", "--count", `${base}..${branch}`]).then(parseCount),
     stashCount: () => git(["stash", "list"]).then((text) => lines(text).length),
-    merged: (branch, target = "main") =>
-      runGit(["merge-base", "--is-ancestor", branch, target], dir)
-        .then(() => true)
-        .catch(() => false),
+    // 注意: ここで使う runGit は失敗時に reject せず空文字を返す（exit code を握り潰す）。
+    // そのため `merge-base --is-ancestor` の終了コードでは判定できない。
+    // 「A の oid が rev-list(B) に含まれるか」という出力ベースで祖先関係を判定する。
+    ancestor: (ancestorRef, descendantRef) => isAncestor(ancestorRef, descendantRef),
+    // branch が target に統合された（target の履歴に branch の先端が含まれる）か。
+    merged: (branch, target = "main") => isAncestor(branch, target),
+    upstream: () => git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]).then((text) => text.trim()),
   };
+
+  // 出力ベースの祖先判定。runGit が exit code を握り潰すため、
+  // 「A の oid が rev-list(B) に含まれるか」で A が B の祖先かを判定する。
+  async function isAncestor(ancestorRef, descendantRef) {
+    const [ancestorOid, descendantList] = await Promise.all([
+      git(["rev-parse", ancestorRef]).then((t) => t.trim()).catch(() => ""),
+      git(["rev-list", descendantRef]).then(lines).catch(() => []),
+    ]);
+    return ancestorOid.length > 0 && descendantList.includes(ancestorOid);
+  }
 }
 
 /**
@@ -97,6 +112,21 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
   const clean = async () => (await g.status()).trim() === "";
   const stagedHas = async (file) => (await g.staged()).includes(file);
   const headDiffHas = async (file) => (await g.headDiff()).includes(file);
+  const refEquals = async (left, right) => {
+    const [leftRef, rightRef] = await Promise.all([g.ref(left), g.ref(right)]);
+    return leftRef !== "" && leftRef === rightRef;
+  };
+  const annotatedTag = async (name) => (await g.tag(name)) && (await g.tagType(name)) === "tag";
+  const mergeIntroducedBranch = async (branch) => {
+    if ((await g.head()) !== "main" || !(await g.merged(branch, "main"))) return false;
+    const merge = await g.git(["rev-list", "--first-parent", "--merges", "-1", "main"]).then((text) => text.trim());
+    if (!merge) return false;
+    const firstParent = await g.ref(`${merge}^1`);
+    return (await g.ancestor(branch, merge)) && !(await g.ancestor(branch, firstParent));
+  };
+  const recoverRestored = async () => (await allTracked("recover.txt")) && (await g.message()) === "recover target";
+  const remoteCommitHasFile = async (ref, file) =>
+    lines(await g.git(["ls-tree", "-r", "--name-only", ref])).includes(file);
 
   const checks = {
     twoNewCommits: async () => (await g.count()) >= 3,
@@ -152,13 +182,17 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     bExists: async () => g.branch("feature/b"),
     onFeature: async () => (await g.head()) === "feature",
     aheadTwo: async () => (await g.ahead("main", "feature")) >= 2,
+    rebasedOntoMain: async () =>
+      (await g.ancestor("main", "feature")) &&
+      (await allTracked("feature.txt")) &&
+      (await g.git(["merge-base", "main", "feature"]).then((text) => text.trim())) === (await g.ref("main")),
     showCurrentUsed: () => history.some((entry) => /^git\s+branch\s+--show-current\b/.test(entry.trim())),
     hotfixExists: async () => g.branch("hotfix"),
     onHotfix: async () => (await g.head()) === "hotfix",
     featureFileTracked: async () => allTracked("feature.txt"),
     switchDashUsed: () => history.some((entry) => /^git\s+switch\s+-\s*$/.test(entry.trim())),
     featureMerged: async () => (await g.merged("feature")) && (await allTracked("feature.txt")),
-    mergeCommit: async () => (await g.merges()) >= 1,
+    mergeCommit: async () => mergeIntroducedBranch("feature"),
     noMarkers: async () => noConflictMarkers(dir, id === 59 ? "config.txt" : "README.md"),
     mergeAbortUsed: () => history.some((entry) => /^git\s+merge\s+--abort\b/.test(entry.trim())),
     cMerged: async () => (await g.merged("feature/c")) && (await allTracked("c.txt")),
@@ -171,9 +205,13 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     oneCommit: async () => (await g.count()) === 1,
     staged: async () => (await g.staged()).length > 0,
     badGone: async () => !(await exists(dir, "bad.txt")),
-    revertCommit: async () => (await g.count()) >= 3,
+    revertCommit: async () =>
+      (await g.count()) >= 3 &&
+      (await g.message()).startsWith("Revert") &&
+      (id === 71 ? !(await exists(dir, "bad.txt")) : !(await exists(dir, "old-bug.txt"))),
     reflogUsed: () => hasCommand(history, ["git", "reflog"]),
     lostTracked: async () => allTracked("lost.txt"),
+    recoverHead: recoverRestored,
     hardResetUsed: () => history.some((entry) => /^git\s+reset\s+--hard\b/.test(entry.trim())),
     readmeExists: async () => exists(dir, "README.md"),
     checkoutFileUsed: () => history.some((entry) => /^git\s+checkout\s+--\s+README\.md\b/.test(entry.trim())),
@@ -190,7 +228,10 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     stashTwo: async () => (await g.stashCount()) >= 2,
     stashShowUsed: () => history.some((entry) => /^git\s+stash\s+show\b/.test(entry.trim())),
     stashClearUsed: () => history.some((entry) => /^git\s+stash\s+clear\b/.test(entry.trim())),
-    tagExists: async () => g.tag({ 89: "v1.0.0", 90: "v1.1.0", 91: "v1.0.0", 97: "v2.0.0", 100: "v1.0.0" }[id]),
+    tagExists: async () => {
+      const name = { 89: "v1.0.0", 90: "v1.1.0", 91: "v1.0.0", 97: "v2.0.0", 100: "v1.0.0" }[id];
+      return [90, 100].includes(id) ? annotatedTag(name) : g.tag(name);
+    },
     tagUsed: () => history.some((entry) => /^git\s+tag\s+v1\.0\.0\b/.test(entry.trim())),
     annotatedTagUsed: () => history.some((entry) => /^git\s+tag\s+-a\b/.test(entry.trim())),
     tagListUsed: () => history.some((entry) => entry.trim() === "git tag"),
@@ -203,8 +244,24 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     secretExists: async () => exists(dir, "secret.txt"),
     bugfixTracked: async () => allTracked("bugfix.txt"),
     releaseTracked: async () => allTracked("release.txt"),
-    recoverTracked: async () => allTracked("recover.txt"),
+    recoverTracked: recoverRestored,
     loginTracked: async () => allTracked(id === 100 ? "login.js" : "src/login.js"),
+    originConfigured: async () => (await g.git(["remote", "get-url", "origin"])).trim().length > 0,
+    remoteVUsed: () => history.some((entry) => /^git\s+remote\s+-v\s*$/.test(entry.trim())),
+    originMainHasHead: async () => refEquals("main", "refs/remotes/origin/main"),
+    mainUpstream: async () => (await g.upstream()) === "origin/main",
+    pulledTeammate: async () => allTracked("teammate.txt"),
+    mainMatchesOrigin: async () => refEquals("main", "refs/remotes/origin/main"),
+    originFetched: async () => remoteCommitHasFile("refs/remotes/origin/main", "remote-only.txt"),
+    logOriginUsed: () => history.some((entry) => /^git\s+log\b/.test(entry.trim()) && entry.includes("origin/main")),
+    reportPicked: async () =>
+      (await allTracked("report.txt")) &&
+      (await g.ancestor("feature", "main")) === false &&
+      lines(await g.git(["log", "--format=%s", "--", "report.txt"])).includes("add report"),
+    configPicked: async () =>
+      (await allTracked("config.txt")) &&
+      (await g.ancestor("hotfix", "main")) === false &&
+      lines(await g.git(["log", "--format=%s", "--", "config.txt"])).includes("fix config"),
   };
 
   return compact(

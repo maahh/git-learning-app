@@ -67,12 +67,57 @@ async function stashWithChange(dir, runGit, text = "stashed\n") {
   await runGit(["stash"]);
 }
 
+async function setupOrigin(dir, runGit) {
+  const origin = path.join(dir, "origin.git");
+  await runGit(["init", "--bare", origin]);
+  await runGit(["remote", "add", "origin", origin]);
+  return origin;
+}
+
+async function pushMainAndCreateRemoteCommit(dir, runGit, file, content, message) {
+  const origin = await setupOrigin(dir, runGit);
+  await runGit(["push", "-u", "origin", "main"]);
+  await runGit(["--git-dir", origin, "symbolic-ref", "HEAD", "refs/heads/main"]);
+  const teammate = path.join(dir, "teammate");
+  await runGit(["clone", origin, teammate]);
+  await writeFiles(teammate, { [file]: content });
+  await runGit(["-C", teammate, "add", file]);
+  await runGit(["-C", teammate, "commit", "-m", message]);
+  await runGit(["-C", teammate, "push", "origin", "main"]);
+}
+
+async function cherryPickBranch(dir, runGit, branch, file, content, message) {
+  await initFiles(dir, runGit);
+  await runGit(["switch", "-c", branch]);
+  await addCommit(dir, runGit, { [file]: content }, message);
+  await runGit(["switch", "main"]);
+  await addCommit(dir, runGit, { "main-work.txt": "main\n" }, "main work");
+}
+
+async function resetAwayRecoverCommit(dir, runGit) {
+  await initFiles(dir, runGit);
+  await addCommit(dir, runGit, { "recover.txt": "recover\n" }, "recover target");
+  await runGit(["reset", "--hard", "HEAD~1"]);
+}
+
 export async function initializeExtraDrillSandbox(drill, dir, runGit) {
   if (drill < 21 || drill > 100) return false;
 
+  if (drill === 21) {
+    await initFiles(dir, runGit);
+    await runGit(["switch", "-c", "feature"]);
+    await addCommit(dir, runGit, { "feature.txt": "feature\n" }, "feature work");
+    await runGit(["switch", "main"]);
+    await addCommit(dir, runGit, { "main.txt": "main\n" }, "main work");
+    return true;
+  }
   if ([25].includes(drill)) {
     await initFiles(dir, runGit);
     await writeFiles(dir, { "one.txt": "one\n", "two.txt": "two\n", "three.txt": "three\n" });
+    return true;
+  }
+  if (drill === 28) {
+    await cherryPickBranch(dir, runGit, "feature", "report.txt", "report\n", "add report");
     return true;
   }
   if ([34, 37, 51].includes(drill)) {
@@ -80,7 +125,12 @@ export async function initializeExtraDrillSandbox(drill, dir, runGit) {
     await addCommit(dir, runGit, { "history.txt": "history\n" }, "add history");
     return true;
   }
-  if ([44, 45, 50, 54, 55].includes(drill)) {
+  if (drill === 44 || drill === 49) {
+    await initFiles(dir, runGit);
+    await setupOrigin(dir, runGit);
+    return true;
+  }
+  if ([45, 50, 54, 55].includes(drill)) {
     await initFiles(dir, runGit);
     await runGit(["branch", "feature"]);
     if ([45, 55].includes(drill)) await runGit(["switch", "feature"]);
@@ -117,8 +167,8 @@ export async function initializeExtraDrillSandbox(drill, dir, runGit) {
     return true;
   }
   if (drill === 63) {
-    await featureAhead(dir, runGit);
-    await runGit(["merge", "--ff-only", "feature"]);
+    await initFiles(dir, runGit);
+    await pushMainAndCreateRemoteCommit(dir, runGit, "teammate.txt", "teammate\n", "teammate work");
     return true;
   }
   if ([64, 98].includes(drill)) {
@@ -130,7 +180,12 @@ export async function initializeExtraDrillSandbox(drill, dir, runGit) {
     await addCommit(dir, runGit, { "main.txt": "main\n" }, "main work");
     return true;
   }
-  if ([66, 76].includes(drill)) {
+  if (drill === 76) {
+    await initFiles(dir, runGit);
+    await pushMainAndCreateRemoteCommit(dir, runGit, "remote-only.txt", "remote\n", "remote only");
+    return true;
+  }
+  if ([66].includes(drill)) {
     await initFiles(dir, runGit);
     await fs.appendFile(path.join(dir, "README.md"), "edit\n", "utf8");
     return true;
@@ -158,8 +213,7 @@ export async function initializeExtraDrillSandbox(drill, dir, runGit) {
     return true;
   }
   if ([74, 99].includes(drill)) {
-    await initFiles(dir, runGit);
-    await addCommit(dir, runGit, { [drill === 74 ? "lost.txt" : "recover.txt"]: "recover\n" }, "recover target");
+    await resetAwayRecoverCommit(dir, runGit);
     return true;
   }
   if (drill === 75) {
@@ -193,7 +247,7 @@ export async function initializeExtraDrillSandbox(drill, dir, runGit) {
     return true;
   }
   if (drill === 86) {
-    await initFiles(dir, runGit);
+    await cherryPickBranch(dir, runGit, "hotfix", "config.txt", "fixed=true\n", "fix config");
     return true;
   }
   if ([91, 92].includes(drill)) {
