@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HomeProgress from "./HomeProgress";
 import { getLesson } from "@/content/lessons";
+import { TOTAL_DRILLS } from "@/content/drills.mjs";
 import { TOTAL_CHAPTERS } from "@/lib/conditions/definitions.mjs";
 
 export default function HomePage() {
@@ -52,7 +53,7 @@ export default function HomePage() {
         <section className="border-t border-border pt-6" aria-label="実践ドリル">
           <div className="rounded-lg border border-border bg-panel p-5">
             <p className="font-mono text-sm text-accent">Practice Drill</p>
-            <h2 className="mt-2 text-xl font-semibold">実践ドリル（20問）</h2>
+            <h2 className="mt-2 text-xl font-semibold">実践ドリル（{TOTAL_DRILLS}問）</h2>
             <p className="mt-3 text-sm leading-6 text-textMuted">
               Chapter とは別枠の、解説なしで手を動かす Git 操作ノックです。
             </p>

@@ -19,7 +19,7 @@ export default function DrillPage() {
             ← 章一覧
           </a>
           <p className="mt-6 font-mono text-sm text-accent">Practice Drill</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-normal">実践ドリル（20問）</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-normal">実践ドリル（{drills.length}問）</h1>
           <p className="mt-3 text-sm leading-6 text-textMuted">
             解説なしで、Git の操作だけを反復する実務寄りの練習セットです。
           </p>
