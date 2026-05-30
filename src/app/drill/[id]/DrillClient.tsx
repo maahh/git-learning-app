@@ -209,33 +209,43 @@ export default function DrillClient({ drill }: DrillClientProps) {
               <span className="font-mono text-xs text-textMuted">{showAnswer ? "close" : "open"}</span>
             </button>
             {showAnswer ? (
-              <ol className="mt-3 space-y-2">
-                {(drillContent?.answer ?? []).map((command, index) => (
-                  <li key={`${index}:${command}`} className="flex min-w-0 items-center gap-2">
-                    <code className="min-w-0 flex-1 overflow-auto rounded border border-border bg-panel px-2 py-1.5 font-mono text-xs leading-5 text-text">
-                      {command}
-                    </code>
-                    <button
-                      className={`shrink-0 rounded-md border px-2 py-1 text-xs font-semibold transition ${
-                        copyStatus[index] === "copied"
-                          ? "border-success/60 bg-success/10 text-success"
+              <>
+                <ol className="mt-3 space-y-2">
+                  {(drillContent?.answer ?? []).map((command, index) => (
+                    <li key={`${index}:${command}`} className="flex min-w-0 items-center gap-2">
+                      <code className="min-w-0 flex-1 overflow-auto rounded border border-border bg-panel px-2 py-1.5 font-mono text-xs leading-5 text-text">
+                        {command}
+                      </code>
+                      <button
+                        className={`shrink-0 rounded-md border px-2 py-1 text-xs font-semibold transition ${
+                          copyStatus[index] === "copied"
+                            ? "border-success/60 bg-success/10 text-success"
+                            : copyStatus[index] === "error"
+                              ? "border-danger/60 bg-danger/10 text-danger"
+                              : "border-accent/50 text-accent hover:bg-accent/10"
+                        }`}
+                        type="button"
+                        onClick={() => void handleCopyCommand(command, index)}
+                        aria-live="polite"
+                      >
+                        {copyStatus[index] === "copied"
+                          ? "✓ コピーしました"
                           : copyStatus[index] === "error"
-                            ? "border-danger/60 bg-danger/10 text-danger"
-                            : "border-accent/50 text-accent hover:bg-accent/10"
-                      }`}
-                      type="button"
-                      onClick={() => void handleCopyCommand(command, index)}
-                      aria-live="polite"
-                    >
-                      {copyStatus[index] === "copied"
-                        ? "✓ コピーしました"
-                        : copyStatus[index] === "error"
-                          ? "コピー失敗"
-                          : "コピー"}
-                    </button>
-                  </li>
-                ))}
-              </ol>
+                            ? "コピー失敗"
+                            : "コピー"}
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                {drillContent?.explanation ? (
+                  <div className="mt-3 rounded-md border border-border bg-panel p-3">
+                    <p className="text-xs font-semibold text-success">解説</p>
+                    <p className="mt-1.5 whitespace-pre-line text-sm leading-6 text-textMuted">
+                      {drillContent.explanation}
+                    </p>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </section>
         </div>
