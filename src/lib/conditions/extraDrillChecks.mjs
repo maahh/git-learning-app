@@ -243,9 +243,12 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     tagListUsed: () => history.some((entry) => entry.trim() === "git tag"),
     tagGone: async () => !(await g.tag("v1.0.0")),
     tagDeleteUsed: () => history.some((entry) => /^git\s+tag\s+-d\b/.test(entry.trim())),
-    gitignore: async () => gitignoreIncludes(dir, id === 94 ? "dist/" : "*.log"),
-    debugIgnored: async () => !(await g.status()).includes("debug.log"),
-    distIgnored: async () => !(await g.status()).includes("dist/app.js"),
+    gitignore: async () =>
+      (await gitignoreIncludes(dir, id === 94 ? "dist/" : "*.log")) && (await allCommitted(".gitignore")),
+    debugIgnored: async () =>
+      (await allCommitted(".gitignore")) && !(await g.status()).includes("debug.log"),
+    distIgnored: async () =>
+      (await allCommitted(".gitignore")) && !(await g.status()).includes("dist/app.js"),
     secretUntracked: async () => notTracked("secret.txt"),
     secretExists: async () => exists(dir, "secret.txt"),
     bugfixTracked: async () => allCommitted("bugfix.txt"),

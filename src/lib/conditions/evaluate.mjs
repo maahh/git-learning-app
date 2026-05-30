@@ -328,13 +328,16 @@ export async function evaluateDrillChecks(id, dir, history = [], runGit) {
   }
 
   if (id === 5) {
-    const [hasPatterns, status] = await Promise.all([
+    const [hasPatterns, status, gitignoreCommitted] = await Promise.all([
       gitignoreIncludesPatterns(dir, ["*.log", "*.tmp"]),
       runGit(["status", "--porcelain"], dir).catch(() => ""),
+      committedFiles(runGit, dir, ".gitignore"),
     ]);
+    // .gitignore をコミットするまで達成にしない（printf だけで緑になるのを防ぐ）
+    const committed = hasCommitted(gitignoreCommitted, ".gitignore");
     return compactChecks([
-      conditionWithOk(c, "drill5.gitignore", hasPatterns),
-      conditionWithOk(c, "drill5.ignored", !status.includes("build.log") && !status.includes("cache.tmp")),
+      conditionWithOk(c, "drill5.gitignore", hasPatterns && committed),
+      conditionWithOk(c, "drill5.ignored", committed && !status.includes("build.log") && !status.includes("cache.tmp")),
     ]);
   }
 
