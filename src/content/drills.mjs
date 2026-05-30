@@ -164,12 +164,14 @@ export const drills = [
     hint: "衝突後はファイルから `<<<<<<<` などのマーカーを消し、`git add` してコミットします。",
     answer: [
       "git merge feature",
+      "git status",
+      "cat README.md",
       "printf \"# My Project\\nmain line\\nfeature line\\n\" > README.md",
       "git add README.md",
       "git commit -m \"merge feature\"",
     ],
     explanation:
-      "`git merge feature` で同じ箇所の変更がぶつかると、Git は自動判断を止めてファイルに衝突マーカーを入れます。内容を人が選び直してマーカーを消し、`git add` で解決済みとして知らせてから `git commit` します。衝突解決では両方の意図を確認し、マーカーを残さないことが大切です。",
+      "`git merge feature` で同じ箇所の変更がぶつかると、Git は自動判断を止めてファイルに衝突マーカーを入れます。いきなり直さず、まず `git status` でどのファイルが未解決か、`cat README.md` でマーカー（`<<<<<<<`〜`>>>>>>>`）と両側の主張を確認するのが原因追及です。状況を把握したうえで内容を選び直してマーカーを消し、`git add` で解決済みと伝えてから `git commit` します。",
     conditions: [
       { id: "drill12.noMarkers", label: "README.md にコンフリクトマーカーが残っていない", kind: "state" },
       { id: "drill12.mergeCommit", label: "マージコミットが作られている", kind: "state" },
