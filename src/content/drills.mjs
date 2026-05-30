@@ -221,9 +221,9 @@ export const drills = [
     title: "コミットを打ち消す",
     prompt: "`bad change` コミットを `git revert` で打ち消すコミットを作ってください。",
     hint: "`git revert` は既存コミットを消さず、逆向きの変更を新しいコミットとして追加します。",
-    answer: ["git revert HEAD --no-edit"],
+    answer: ["git log --oneline", "git revert HEAD --no-edit"],
     explanation:
-      "`git revert HEAD --no-edit` は直前コミットの変更を打ち消す新しいコミットを作ります。履歴を消さないため、共有済みの main でも他の人の履歴とズレにくいのが利点です。`--no-edit` は自動生成されるメッセージをそのまま使う指定です。",
+      "まず `git log --oneline` で、打ち消したい `bad change` がどのコミットか（今回は直前なので HEAD）を確認するのが原因追及です。`git revert HEAD --no-edit` は対象コミットの変更を打ち消す新しいコミットを作ります。履歴を消さないため共有済みの main でも安全で、`--no-edit` は自動生成メッセージをそのまま使う指定です。対象を取り違えると別の変更を消してしまうので、必ず確認してから revert します。",
     conditions: [
       { id: "drill16.badGone", label: "bad.txt が作業ツリーから消えている", kind: "state" },
       { id: "drill16.revertCommit", label: "コミット数が3つ以上ある", kind: "state" },
