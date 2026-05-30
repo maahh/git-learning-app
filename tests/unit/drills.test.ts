@@ -147,7 +147,13 @@ describe("drill conditions", () => {
       "drill5.ignored": false,
     });
 
+    // .gitignore を作っただけ（未コミット）では達成にならない
     await fs.writeFile(path.join(dir, ".gitignore"), "*.log\n*.tmp\n", "utf8");
+    expect(await drillOk(5, dir)).toMatchObject({
+      "drill5.gitignore": false,
+      "drill5.ignored": false,
+    });
+
     await commitAll(dir, "ignore generated files");
 
     expect(await drillOk(5, dir)).toMatchObject({
