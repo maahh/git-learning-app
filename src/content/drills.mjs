@@ -1,4 +1,6 @@
-export const TOTAL_DRILLS = 20;
+import { extraDrills } from "./drillExtras.mjs";
+
+export const TOTAL_DRILLS = 100;
 
 export const drills = [
   {
@@ -247,6 +249,7 @@ export const drills = [
       { id: "drill20.tag", label: "v0.1.0 タグが存在する", kind: "state" },
     ],
   },
+  ...extraDrills,
 ];
 
 export function getDrill(id) {

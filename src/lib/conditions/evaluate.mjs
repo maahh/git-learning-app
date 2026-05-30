@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getDrill } from "../../content/drills.mjs";
+import { evaluateExtraDrillChecks } from "./extraDrillChecks.mjs";
 import {
   ch1Conditions,
   ch2Conditions,
@@ -477,6 +478,9 @@ export async function evaluateDrillChecks(id, dir, history = [], runGit) {
       conditionWithOk(c, "drill20.tag", tag.trim() === "v0.1.0"),
     ]);
   }
+
+  const extraChecks = await evaluateExtraDrillChecks(id, dir, history, runGit, c);
+  if (extraChecks) return extraChecks;
 
   return c.map((condition) => ({ ...condition, ok: false }));
 }

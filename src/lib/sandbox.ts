@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { TOTAL_CHAPTERS } from "./conditions/definitions.mjs";
 import { TOTAL_DRILLS } from "../content/drills.mjs";
 import { evaluateChapterChecks, evaluateDrillChecks } from "./conditions/evaluate.mjs";
+import { initializeExtraDrillSandbox } from "./drills/extraSandbox.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -270,7 +271,10 @@ async function initializeDrillSandbox(drill: number, dir: string): Promise<void>
       },
       "initial app",
     );
+    return;
   }
+
+  await initializeExtraDrillSandbox(drill, dir, (args) => runGit(args, dir));
 }
 
 async function initializeCommittedReadme(dir: string, message = "initial commit"): Promise<void> {

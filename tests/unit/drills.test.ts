@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { drills, TOTAL_DRILLS } from "../../src/content/drills.mjs";
 import { evaluateDrillChecks } from "../../src/lib/conditions/evaluate.mjs";
+import { initializeExtraDrillSandbox } from "../../src/lib/drills/extraSandbox.mjs";
 
 const execFileAsync = promisify(execFile);
 const gitAvailable = (() => {
@@ -37,6 +38,21 @@ async function runGit(args: string[], cwd: string): Promise<string> {
   return stdout;
 }
 
+async function runShell(command: string, cwd: string): Promise<void> {
+  await execFileAsync("bash", ["-lc", command], {
+    cwd,
+    timeout: 5000,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "Git Learning App",
+      GIT_AUTHOR_EMAIL: "git-learning@example.local",
+      GIT_COMMITTER_NAME: "Git Learning App",
+      GIT_COMMITTER_EMAIL: "git-learning@example.local",
+      GIT_PAGER: "cat",
+    },
+  });
+}
+
 async function init(dir: string): Promise<void> {
   await runGit(["init", "-b", "main"], dir);
 }
@@ -63,6 +79,8 @@ async function drillOk(id: number, dir: string, history: string[] = []): Promise
 describe("drill conditions", () => {
   it("all drills have on-demand hint and answer content", () => {
     expect(drills).toHaveLength(TOTAL_DRILLS);
+    expect(drills).toHaveLength(100);
+    expect(drills.map((drill) => drill.id)).toEqual(Array.from({ length: 100 }, (_, index) => index + 1));
     for (const drill of drills) {
       expect(drill.hint.trim().length, `drill ${drill.id} hint`).toBeGreaterThan(0);
       expect(drill.answer.length, `drill ${drill.id} answer`).toBeGreaterThan(0);
@@ -246,4 +264,26 @@ describe("drill conditions", () => {
       "drill20.tag": true,
     });
   });
+
+  const representativeExtraDrills = [22, 32, 42, 58, 68, 80, 89, 95, 98, 100];
+
+  for (const id of representativeExtraDrills) {
+    gitIt(`drill ${id} answer reaches all checks`, async () => {
+      const dir = await tempDir(`claude-git-app-v5-drill${id}`);
+      const initialized = await initializeExtraDrillSandbox(id, dir, (args) => runGit(args, dir));
+      expect(initialized).toBe(true);
+
+      const before = await drillOk(id, dir);
+      expect(Object.values(before).some((ok) => !ok)).toBe(true);
+
+      const drill = drills.find((item) => item.id === id);
+      expect(drill).toBeDefined();
+      for (const command of drill!.answer) {
+        await runShell(command, dir).catch(() => undefined);
+      }
+
+      const after = await drillOk(id, dir, drill!.answer);
+      expect(after).toEqual(Object.fromEntries(Object.keys(after).map((key) => [key, true])));
+    });
+  }
 });

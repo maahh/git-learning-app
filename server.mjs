@@ -12,6 +12,7 @@ import { WebSocketServer } from "ws";
 import { TOTAL_CHAPTERS } from "./src/lib/conditions/definitions.mjs";
 import { TOTAL_DRILLS } from "./src/content/drills.mjs";
 import { evaluateChapterChecks, evaluateDrillChecks } from "./src/lib/conditions/evaluate.mjs";
+import { initializeExtraDrillSandbox } from "./src/lib/drills/extraSandbox.mjs";
 import { buildFileStates } from "./src/lib/fileStates.mjs";
 
 const require = createRequire(import.meta.url);
@@ -315,7 +316,10 @@ async function initializeDrillSandbox(drill, dir) {
       },
       "initial app",
     );
+    return;
   }
+
+  await initializeExtraDrillSandbox(drill, dir, (args) => runGitStrict(dir, args));
 }
 
 async function initializeCommittedReadme(dir, message = "initial commit") {
