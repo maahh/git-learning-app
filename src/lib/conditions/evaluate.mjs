@@ -99,6 +99,18 @@ function hasTracked(trackedText, file) {
   return trackedFilesFrom(trackedText).includes(file);
 }
 
+function committedFilesFrom(text) {
+  return text.split(/\r?\n/).filter(Boolean);
+}
+
+function hasCommitted(committedText, file) {
+  return committedFilesFrom(committedText).includes(file);
+}
+
+async function committedFiles(runGit, dir, ...files) {
+  return runGit(["ls-tree", "-r", "HEAD", "--name-only", "--", ...files], dir).catch(() => "");
+}
+
 async function gitignoreIncludesPatterns(dir, patterns) {
   const gitignore = await readText(path.join(dir, ".gitignore"));
   const lines = gitignore.split(/\r?\n/).map((line) => line.trim());
@@ -236,19 +248,19 @@ export async function evaluateChapterChecks(chapter, dir, history = [], runGit) 
   }
 
   if (chapter === 9) {
-    const [branchText, trackedLoginText, gitignoreHasLogPattern, headText] = await Promise.all([
+    const [branchText, committedLoginText, gitignoreHasLogPattern, headText] = await Promise.all([
       runGit(["branch", "--list", "feature/login"], dir).catch(() => ""),
-      runGit(["ls-files", "login.html"], dir).catch(() => ""),
+      committedFiles(runGit, dir, "login.html"),
       gitignoreIncludesLogPattern(dir),
       runGit(["rev-parse", "--abbrev-ref", "HEAD"], dir).catch(() => ""),
     ]);
-    const loginTracked = trackedLoginText.split(/\r?\n/).includes("login.html");
+    const loginCommitted = hasCommitted(committedLoginText, "login.html");
 
     return [
       { ...ch9Conditions[0], ok: branchText.trim().length > 0 },
-      { ...ch9Conditions[1], ok: loginTracked },
+      { ...ch9Conditions[1], ok: loginCommitted },
       { ...ch9Conditions[2], ok: gitignoreHasLogPattern },
-      { ...ch9Conditions[3], ok: headText.trim() === "main" && loginTracked },
+      { ...ch9Conditions[3], ok: headText.trim() === "main" && loginCommitted },
     ];
   }
 
@@ -271,22 +283,22 @@ export async function evaluateDrillChecks(id, dir, history = [], runGit) {
   const c = drill.conditions;
 
   if (id === 1) {
-    const [countText, tracked] = await Promise.all([
+    const [countText, committed] = await Promise.all([
       runGit(["rev-list", "--count", "HEAD"], dir).catch(() => "0"),
-      runGit(["ls-files", "README.md"], dir).catch(() => ""),
+      committedFiles(runGit, dir, "README.md"),
     ]);
     return compactChecks([
       conditionWithOk(c, "drill1.commit", parseCount(countText) >= 1),
-      conditionWithOk(c, "drill1.readmeTracked", hasTracked(tracked, "README.md")),
+      conditionWithOk(c, "drill1.readmeTracked", hasCommitted(committed, "README.md")),
     ]);
   }
 
   if (id === 2) {
-    const [tracked, countText] = await Promise.all([
-      runGit(["ls-files", "a.txt", "b.txt", "c.txt"], dir).catch(() => ""),
+    const [committed, countText] = await Promise.all([
+      committedFiles(runGit, dir, "a.txt", "b.txt", "c.txt"),
       runGit(["rev-list", "--count", "HEAD"], dir).catch(() => "0"),
     ]);
-    const files = trackedFilesFrom(tracked);
+    const files = committedFilesFrom(committed);
     return compactChecks([
       conditionWithOk(c, "drill2.filesTracked", ["a.txt", "b.txt", "c.txt"].every((file) => files.includes(file))),
       conditionWithOk(c, "drill2.commit", parseCount(countText) >= 1),
@@ -305,12 +317,12 @@ export async function evaluateDrillChecks(id, dir, history = [], runGit) {
   }
 
   if (id === 4) {
-    const [keepTracked, status] = await Promise.all([
-      runGit(["ls-files", "keep.txt"], dir).catch(() => ""),
+    const [keepCommitted, status] = await Promise.all([
+      committedFiles(runGit, dir, "keep.txt"),
       runGit(["status", "--porcelain"], dir).catch(() => ""),
     ]);
     return compactChecks([
-      conditionWithOk(c, "drill4.keepTracked", hasTracked(keepTracked, "keep.txt")),
+      conditionWithOk(c, "drill4.keepTracked", hasCommitted(keepCommitted, "keep.txt")),
       conditionWithOk(c, "drill4.laterUntracked", status.split(/\r?\n/).includes("?? later.txt")),
     ]);
   }
@@ -464,17 +476,17 @@ export async function evaluateDrillChecks(id, dir, history = [], runGit) {
   }
 
   if (id === 20) {
-    const [tracked, hasLogPattern, head, tag] = await Promise.all([
-      runGit(["ls-files", "src/login.js"], dir).catch(() => ""),
+    const [committed, hasLogPattern, head, tag] = await Promise.all([
+      committedFiles(runGit, dir, "src/login.js"),
       gitignoreIncludesPatterns(dir, ["*.log"]),
       runGit(["rev-parse", "--abbrev-ref", "HEAD"], dir).catch(() => ""),
       runGit(["tag", "--list", "v0.1.0"], dir).catch(() => ""),
     ]);
-    const loginTracked = hasTracked(tracked, "src/login.js");
+    const loginCommitted = hasCommitted(committed, "src/login.js");
     return compactChecks([
-      conditionWithOk(c, "drill20.loginTracked", loginTracked),
+      conditionWithOk(c, "drill20.loginTracked", loginCommitted),
       conditionWithOk(c, "drill20.gitignore", hasLogPattern),
-      conditionWithOk(c, "drill20.merged", head.trim() === "main" && loginTracked),
+      conditionWithOk(c, "drill20.merged", head.trim() === "main" && loginCommitted),
       conditionWithOk(c, "drill20.tag", tag.trim() === "v0.1.0"),
     ]);
   }

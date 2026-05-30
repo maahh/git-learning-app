@@ -152,7 +152,7 @@ export const ch9Conditions = [
   },
   {
     id: "ch9.loginCommitted",
-    label: "login.html が Git で追跡されている",
+    label: "login.html が HEAD にコミット済み",
     kind: "state",
   },
   {

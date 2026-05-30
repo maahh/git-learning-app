@@ -301,7 +301,7 @@ describe("conditions", () => {
 
     const checks = await evaluateChapterChecks(9, dir, [], async (args) => {
       if (args.join(" ") === "branch --list feature/login") return "  feature/login\n";
-      if (args.join(" ") === "ls-files login.html") return "login.html\n";
+      if (args.join(" ") === "ls-tree -r HEAD --name-only -- login.html") return "login.html\n";
       if (args.join(" ") === "rev-parse --abbrev-ref HEAD") return "main\n";
       return "";
     });
@@ -527,6 +527,12 @@ describe("conditions", () => {
     expect(checkOk(filesCreated, "ch9.mergedToMain")).toBe(false);
 
     await runGit(["add", "login.html", ".gitignore"], dir);
+    const staged = await evaluateChapterChecks(9, dir, [], runGit);
+    expect(checkOk(staged, "ch9.featureBranch")).toBe(true);
+    expect(checkOk(staged, "ch9.loginCommitted")).toBe(false);
+    expect(checkOk(staged, "ch9.gitignoreAdded")).toBe(true);
+    expect(checkOk(staged, "ch9.mergedToMain")).toBe(false);
+
     await runGit(["commit", "-m", "add login page"], dir);
     const committed = await evaluateChapterChecks(9, dir, [], runGit);
     expect(checkOk(committed, "ch9.featureBranch")).toBe(true);

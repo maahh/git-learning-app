@@ -16,7 +16,7 @@ export const drills = [
     ],
     conditions: [
       { id: "drill1.commit", label: "1つ以上のコミットがある", kind: "state" },
-      { id: "drill1.readmeTracked", label: "README.md が Git で追跡されている", kind: "state" },
+      { id: "drill1.readmeTracked", label: "README.md が HEAD にコミット済み", kind: "state" },
     ],
   },
   {
@@ -26,7 +26,7 @@ export const drills = [
     hint: "`git add` には複数ファイルをまとめて指定できます。",
     answer: ["git add a.txt b.txt c.txt", "git commit -m \"add files\""],
     conditions: [
-      { id: "drill2.filesTracked", label: "a.txt / b.txt / c.txt がすべて追跡されている", kind: "state" },
+      { id: "drill2.filesTracked", label: "a.txt / b.txt / c.txt がすべて HEAD にコミット済み", kind: "state" },
       { id: "drill2.commit", label: "1つ以上のコミットがある", kind: "state" },
     ],
   },
@@ -48,7 +48,7 @@ export const drills = [
     hint: "コミットしたいファイルだけを `git add` すれば、他の未追跡ファイルは残せます。",
     answer: ["git add keep.txt", "git commit -m \"add keep\""],
     conditions: [
-      { id: "drill4.keepTracked", label: "keep.txt が Git で追跡されている", kind: "state" },
+      { id: "drill4.keepTracked", label: "keep.txt が HEAD にコミット済み", kind: "state" },
       { id: "drill4.laterUntracked", label: "later.txt が未追跡のまま残っている", kind: "state" },
     ],
   },
@@ -243,7 +243,7 @@ export const drills = [
       "git tag v0.1.0",
     ],
     conditions: [
-      { id: "drill20.loginTracked", label: "src/login.js が Git で追跡されている", kind: "state" },
+      { id: "drill20.loginTracked", label: "src/login.js が HEAD にコミット済み", kind: "state" },
       { id: "drill20.gitignore", label: ".gitignore に *.log がある", kind: "state" },
       { id: "drill20.merged", label: "main に src/login.js が統合されている", kind: "state" },
       { id: "drill20.tag", label: "v0.1.0 タグが存在する", kind: "state" },

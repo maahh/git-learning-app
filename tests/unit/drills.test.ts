@@ -279,6 +279,172 @@ describe("drill conditions", () => {
     });
   });
 
+  const commitRequiredCases = [
+    {
+      id: 1,
+      condition: "drill1.readmeTracked",
+      setup: async (dir: string) => {
+        await init(dir);
+        await fs.writeFile(path.join(dir, "README.md"), "# Hello\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "README.md"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "first commit"], dir);
+      },
+    },
+    {
+      id: 2,
+      condition: "drill2.filesTracked",
+      setup: async (dir: string) => {
+        await init(dir);
+        await fs.writeFile(path.join(dir, "a.txt"), "a\n", "utf8");
+        await fs.writeFile(path.join(dir, "b.txt"), "b\n", "utf8");
+        await fs.writeFile(path.join(dir, "c.txt"), "c\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "a.txt", "b.txt", "c.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add files"], dir);
+      },
+    },
+    {
+      id: 4,
+      condition: "drill4.keepTracked",
+      setup: async (dir: string) => {
+        await initReadme(dir);
+        await fs.writeFile(path.join(dir, "keep.txt"), "keep\n", "utf8");
+        await fs.writeFile(path.join(dir, "later.txt"), "later\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "keep.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add keep"], dir);
+      },
+    },
+    {
+      id: 20,
+      condition: "drill20.loginTracked",
+      setup: async (dir: string) => {
+        await init(dir);
+        await fs.mkdir(path.join(dir, "src"), { recursive: true });
+        await fs.writeFile(path.join(dir, "README.md"), "# App\n", "utf8");
+        await fs.writeFile(path.join(dir, "src", "app.js"), "export function app() { return 'app'; }\n", "utf8");
+        await commitAll(dir, "initial app");
+        await runGit(["switch", "-c", "feature/login"], dir);
+        await fs.writeFile(path.join(dir, "src", "login.js"), "export function login() { return true; }\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "src/login.js"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add login"], dir);
+      },
+    },
+    {
+      id: 23,
+      condition: "drill23.filesTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(23, dir);
+        await fs.writeFile(path.join(dir, "alpha.txt"), "alpha\n", "utf8");
+        await fs.writeFile(path.join(dir, "beta.txt"), "beta\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "-A"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add alpha beta"], dir);
+      },
+    },
+    {
+      id: 25,
+      condition: "drill25.selectedTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(25, dir);
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "one.txt", "two.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add selected files"], dir);
+      },
+    },
+    {
+      id: 27,
+      condition: "drill27.noteTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(27, dir);
+        await fs.writeFile(path.join(dir, "note.txt"), "note\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "note.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "--amend", "--no-edit"], dir);
+      },
+    },
+    {
+      id: 54,
+      condition: "drill54.featureFileTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(54, dir);
+        await runGit(["switch", "feature"], dir);
+        await fs.writeFile(path.join(dir, "feature.txt"), "feature\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "feature.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add feature file"], dir);
+      },
+    },
+    {
+      id: 96,
+      condition: "drill96.bugfixTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(96, dir);
+        await fs.writeFile(path.join(dir, "bugfix.txt"), "fixed\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "bugfix.txt"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "fix bug"], dir);
+      },
+    },
+    {
+      id: 100,
+      condition: "drill100.loginTracked",
+      setup: async (dir: string) => {
+        await initializeExtra(100, dir);
+        await runGit(["switch", "-c", "feature/login"], dir);
+        await fs.writeFile(path.join(dir, "login.js"), "export function login() { return true; }\n", "utf8");
+      },
+      addOnly: async (dir: string) => {
+        await runGit(["add", "login.js"], dir);
+      },
+      commit: async (dir: string) => {
+        await runGit(["commit", "-m", "add login"], dir);
+      },
+    },
+  ];
+
+  for (const testCase of commitRequiredCases) {
+    gitIt(`drill ${testCase.id} requires commit, not only git add`, async () => {
+      const dir = await tempDir(`claude-git-app-v5-commit-required-${testCase.id}`);
+      await testCase.setup(dir);
+
+      await testCase.addOnly(dir);
+      expect(await drillOk(testCase.id, dir)).toMatchObject({ [testCase.condition]: false });
+
+      await testCase.commit(dir);
+      expect(await drillOk(testCase.id, dir)).toMatchObject({ [testCase.condition]: true });
+    });
+  }
+
   const representativeExtraDrills = [22, 32, 42, 58, 68, 80, 89, 95, 98, 100];
 
   for (const id of representativeExtraDrills) {

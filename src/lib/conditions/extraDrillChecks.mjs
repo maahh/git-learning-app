@@ -38,6 +38,10 @@ function hasTracked(text, file) {
   return lines(text).includes(file);
 }
 
+function hasCommitted(text, file) {
+  return lines(text).includes(file);
+}
+
 async function gitignoreIncludes(dir, pattern) {
   const text = await readText(dir, ".gitignore");
   return text.split(/\r?\n/).some((line) => line.trim() === pattern);
@@ -67,6 +71,7 @@ async function common(dir, runGit) {
     message: () => git(["log", "-1", "--format=%s"]).then((text) => text.trim()),
     status: () => git(["status", "--porcelain"]),
     tracked: (...files) => git(["ls-files", ...files]),
+    committed: (...files) => git(["ls-tree", "-r", "HEAD", "--name-only", "--", ...files]),
     staged: () => git(["diff", "--cached", "--name-only"]).then(lines),
     working: () => git(["diff", "--name-only"]).then(lines),
     headDiff: () => git(["diff", "HEAD", "--name-only"]).then(lines),
@@ -104,9 +109,9 @@ async function common(dir, runGit) {
 export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditions) {
   if (id < 21 || id > 100) return null;
   const g = await common(dir, runGit);
-  const allTracked = async (...files) => {
-    const tracked = await g.tracked(...files);
-    return files.every((file) => hasTracked(tracked, file));
+  const allCommitted = async (...files) => {
+    const committed = await g.committed(...files);
+    return files.every((file) => hasCommitted(committed, file));
   };
   const notTracked = async (file) => !hasTracked(await g.tracked(file), file);
   const clean = async () => (await g.status()).trim() === "";
@@ -124,13 +129,14 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     const firstParent = await g.ref(`${merge}^1`);
     return (await g.ancestor(branch, merge)) && !(await g.ancestor(branch, firstParent));
   };
-  const recoverRestored = async () => (await allTracked("recover.txt")) && (await g.message()) === "recover target";
+  const recoverRestored = async () => (await allCommitted("recover.txt")) && (await g.message()) === "recover target";
   const remoteCommitHasFile = async (ref, file) =>
     lines(await g.git(["ls-tree", "-r", "--name-only", ref])).includes(file);
 
   const checks = {
     twoNewCommits: async () => (await g.count()) >= 3,
-    filesTracked: async () => (id === 21 ? allTracked("work1.txt", "work2.txt") : allTracked("alpha.txt", "beta.txt")),
+    filesTracked: async () =>
+      id === 21 ? allCommitted("work1.txt", "work2.txt") : allCommitted("alpha.txt", "beta.txt"),
     message: async () => {
       const expected = {
         22: "empty checkpoint",
@@ -142,12 +148,12 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     allowEmptyUsed: () => hasCommand(history, ["git", "commit", "--allow-empty"]),
     addAUsed: () => hasCommand(history, ["git", "add", "-A"]),
     commitAmUsed: () => history.some((entry) => /^git\s+commit\s+-am\b/.test(entry.trim())),
-    selectedTracked: async () => allTracked("one.txt", "two.txt"),
+    selectedTracked: async () => allCommitted("one.txt", "two.txt"),
     threeUntracked: async () => (await g.status()).split(/\r?\n/).includes("?? three.txt"),
     singleCommit: async () => (await g.count()) === 1,
     amendUsed: () => hasCommand(history, ["git", "commit", "--amend", "--no-edit"]),
-    noteTracked: async () => allTracked("note.txt"),
-    fileTracked: async () => allTracked("japanese.txt"),
+    noteTracked: async () => allCommitted("note.txt"),
+    fileTracked: async () => allCommitted("japanese.txt"),
     hasCommit: async () => (await g.count()) >= 1,
     showHeadUsed: () => history.some((entry) => /^git\s+show\s+HEAD\b/.test(entry.trim())),
     logOneUsed: () => history.some((entry) => /^git\s+log\s+-1\b/.test(entry.trim())),
@@ -164,7 +170,7 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     logN2Used: () => history.some((entry) => /^git\s+log\b/.test(entry.trim()) && entry.includes("-n") && entry.includes("2")),
     showUsed: () => hasCommand(history, ["git", "show"]),
     logGraphUsed: () => history.some((entry) => /^git\s+log\b/.test(entry.trim()) && entry.includes("--graph")),
-    readmeTracked: async () => allTracked("README.md"),
+    readmeTracked: async () => allCommitted("README.md"),
     logFileUsed: () => history.some((entry) => /^git\s+log\b/.test(entry.trim()) && entry.includes("README.md")),
     branchExists: async () => g.branch({ 41: "experiment", 42: "feature/a", 43: "feature/b", 51: "rescue" }[id]),
     onMain: async () => (await g.head()) === "main",
@@ -184,21 +190,21 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     aheadTwo: async () => (await g.ahead("main", "feature")) >= 2,
     rebasedOntoMain: async () =>
       (await g.ancestor("main", "feature")) &&
-      (await allTracked("feature.txt")) &&
+      (await allCommitted("feature.txt")) &&
       (await g.git(["merge-base", "main", "feature"]).then((text) => text.trim())) === (await g.ref("main")),
     showCurrentUsed: () => history.some((entry) => /^git\s+branch\s+--show-current\b/.test(entry.trim())),
     hotfixExists: async () => g.branch("hotfix"),
     onHotfix: async () => (await g.head()) === "hotfix",
-    featureFileTracked: async () => allTracked("feature.txt"),
+    featureFileTracked: async () => allCommitted("feature.txt"),
     switchDashUsed: () => history.some((entry) => /^git\s+switch\s+-\s*$/.test(entry.trim())),
-    featureMerged: async () => (await g.merged("feature")) && (await allTracked("feature.txt")),
+    featureMerged: async () => (await g.merged("feature")) && (await allCommitted("feature.txt")),
     mergeCommit: async () => mergeIntroducedBranch("feature"),
     noMarkers: async () => noConflictMarkers(dir, id === 59 ? "config.txt" : "README.md"),
     mergeAbortUsed: () => history.some((entry) => /^git\s+merge\s+--abort\b/.test(entry.trim())),
-    cMerged: async () => (await g.merged("feature/c")) && (await allTracked("c.txt")),
+    cMerged: async () => (await g.merged("feature/c")) && (await allCommitted("c.txt")),
     mergeUsed: () => hasCommand(history, ["git", "merge"]),
-    aMerged: async () => (await g.merged("feature/a")) && (await allTracked("a.txt")),
-    bMerged: async () => (await g.merged("feature/b")) && (await allTracked("b.txt")),
+    aMerged: async () => (await g.merged("feature/a")) && (await allCommitted("a.txt")),
+    bMerged: async () => (await g.merged("feature/b")) && (await allCommitted("b.txt")),
     clean,
     restoreUsed: () => hasCommand(history, ["git", "restore"]),
     noStaged: async () => (await g.staged()).length === 0,
@@ -210,7 +216,7 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
       (await g.message()).startsWith("Revert") &&
       (id === 71 ? !(await exists(dir, "bad.txt")) : !(await exists(dir, "old-bug.txt"))),
     reflogUsed: () => hasCommand(history, ["git", "reflog"]),
-    lostTracked: async () => allTracked("lost.txt"),
+    lostTracked: async () => allCommitted("lost.txt"),
     recoverHead: recoverRestored,
     hardResetUsed: () => history.some((entry) => /^git\s+reset\s+--hard\b/.test(entry.trim())),
     readmeExists: async () => exists(dir, "README.md"),
@@ -242,24 +248,24 @@ export async function evaluateExtraDrillChecks(id, dir, history, runGit, conditi
     distIgnored: async () => !(await g.status()).includes("dist/app.js"),
     secretUntracked: async () => notTracked("secret.txt"),
     secretExists: async () => exists(dir, "secret.txt"),
-    bugfixTracked: async () => allTracked("bugfix.txt"),
-    releaseTracked: async () => allTracked("release.txt"),
+    bugfixTracked: async () => allCommitted("bugfix.txt"),
+    releaseTracked: async () => allCommitted("release.txt"),
     recoverTracked: recoverRestored,
-    loginTracked: async () => allTracked(id === 100 ? "login.js" : "src/login.js"),
+    loginTracked: async () => allCommitted(id === 100 ? "login.js" : "src/login.js"),
     originConfigured: async () => (await g.git(["remote", "get-url", "origin"])).trim().length > 0,
     remoteVUsed: () => history.some((entry) => /^git\s+remote\s+-v\s*$/.test(entry.trim())),
     originMainHasHead: async () => refEquals("main", "refs/remotes/origin/main"),
     mainUpstream: async () => (await g.upstream()) === "origin/main",
-    pulledTeammate: async () => allTracked("teammate.txt"),
+    pulledTeammate: async () => allCommitted("teammate.txt"),
     mainMatchesOrigin: async () => refEquals("main", "refs/remotes/origin/main"),
     originFetched: async () => remoteCommitHasFile("refs/remotes/origin/main", "remote-only.txt"),
     logOriginUsed: () => history.some((entry) => /^git\s+log\b/.test(entry.trim()) && entry.includes("origin/main")),
     reportPicked: async () =>
-      (await allTracked("report.txt")) &&
+      (await allCommitted("report.txt")) &&
       (await g.ancestor("feature", "main")) === false &&
       lines(await g.git(["log", "--format=%s", "--", "report.txt"])).includes("add report"),
     configPicked: async () =>
-      (await allTracked("config.txt")) &&
+      (await allCommitted("config.txt")) &&
       (await g.ancestor("hotfix", "main")) === false &&
       lines(await g.git(["log", "--format=%s", "--", "config.txt"])).includes("fix config"),
   };
