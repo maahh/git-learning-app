@@ -24,7 +24,7 @@ export const drills = [
   {
     id: 2,
     title: "まとめてステージ",
-    prompt: "a.txt / b.txt / c.txt をすべてステージし、まとめて1つのコミットにしてください。",
+    prompt: "1つの作業で生まれた関連ファイル a.txt / b.txt / c.txt があります。後から履歴を追ったり一気に戻したりしやすいよう、3つをまとめて1つのコミットにしてください。",
     hint: "`git add` には複数ファイルをまとめて指定できます。",
     answer: ["git add a.txt b.txt c.txt", "git commit -m \"add files\""],
     explanation:
@@ -37,7 +37,7 @@ export const drills = [
   {
     id: 3,
     title: "コミットメッセージ修正",
-    prompt: "直前のコミットメッセージを `add feature` に直してください。ヒント: `git commit --amend`。",
+    prompt: "コミット直後に、直前のコミットメッセージのタイプミスに気づきました。まだ誰とも共有していないので、新しいコミットを増やさずにメッセージを `add feature` へ直してください。",
     hint: "`git commit --amend` は新しいコミットを作らず、直前のコミットを上書きします（メッセージや内容を直せます）。",
     answer: ["git commit --amend -m \"add feature\""],
     explanation:
@@ -50,7 +50,7 @@ export const drills = [
   {
     id: 4,
     title: "一部だけコミット",
-    prompt: "keep.txt だけをコミットし、later.txt は未追跡のまま残してください。",
+    prompt: "keep.txt は完成しましたが、later.txt はまだ書きかけで今は共有したくありません。keep.txt だけをコミットし、later.txt は未追跡のまま残してください。",
     hint: "コミットしたいファイルだけを `git add` すれば、他の未追跡ファイルは残せます。",
     answer: ["git add keep.txt", "git commit -m \"add keep\""],
     explanation:
@@ -80,7 +80,7 @@ export const drills = [
   {
     id: 6,
     title: "ファイル名変更",
-    prompt: "`git mv` を使って old.txt を new.txt にリネームしてください。ステージ済みの状態で構いません。",
+    prompt: "old.txt という名前が分かりにくいので new.txt に変えたいです。履歴でも「リネーム」として追えるよう、Git の機能でファイル名を変更してください（ステージ済みの状態でOK）。",
     hint: "`git mv 旧名 新名` はファイル名変更を Git のステージに記録します。",
     answer: ["git mv old.txt new.txt"],
     explanation:
@@ -93,7 +93,7 @@ export const drills = [
   {
     id: 7,
     title: "ファイル削除",
-    prompt: "`git rm` を使って temp.txt を削除し、Git に削除を記録してください。",
+    prompt: "もう使わない temp.txt をリポジトリから消したいです。次のコミットに「削除」がきちんと記録される形で temp.txt を削除してください。",
     hint: "`git rm` は作業ツリーから削除し、その削除をステージします。",
     answer: ["git rm temp.txt"],
     explanation:
@@ -147,7 +147,7 @@ export const drills = [
   {
     id: 11,
     title: "マージコミット強制",
-    prompt: "`--no-ff` を使い、必ずマージコミットを作って feature を main にマージしてください。",
+    prompt: "feature での作業が「一機能のまとまり」だと後から履歴で分かるようにしたいです。fast-forward できる場合でも、必ずマージコミットを作って feature を main にマージしてください。",
     hint: "`--no-ff` を付けると fast-forward 可能でもマージコミットを作ります。",
     answer: ["git merge --no-ff feature -m \"merge feature\""],
     explanation:
@@ -219,7 +219,7 @@ export const drills = [
   {
     id: 16,
     title: "コミットを打ち消す",
-    prompt: "`bad change` コミットを `git revert` で打ち消すコミットを作ってください。",
+    prompt: "すでに共有済みの履歴に、不要な `bad change` というコミットが入ってしまいました。履歴は書き換えず、その変更を打ち消す新しいコミットを作って取り消してください。",
     hint: "`git revert` は既存コミットを消さず、逆向きの変更を新しいコミットとして追加します。",
     answer: ["git log --oneline", "git revert HEAD --no-edit"],
     explanation:
@@ -232,7 +232,7 @@ export const drills = [
   {
     id: 17,
     title: "HEADを戻す(soft)",
-    prompt: "`git reset --soft HEAD~1` で1つ前に戻し、変更はステージに残してください。",
+    prompt: "直前のコミットは少し早すぎました。コミット自体は取り消したいですが、変更内容はそのまま手元に残してもう少し手を加えてからコミットし直したいです。HEAD を1つ前に戻し、変更はステージに残してください。",
     hint: "`--soft` は HEAD だけを戻し、取り消したコミットの内容をステージに残します。",
     answer: ["git status", "git reset --soft HEAD~1"],
     explanation:
@@ -245,11 +245,11 @@ export const drills = [
   {
     id: 18,
     title: "作業を退避",
-    prompt: "`git stash` で退避し、`git stash pop` で作業ツリーに戻してください。",
-    hint: "`git stash` で一時退避し、`git stash pop` で退避した変更を作業ツリーへ戻します。",
+    prompt: "README.md を書きかけのまま、急ぎのバグ対応を別で頼まれました。この中途半端な変更はまだコミットしたくありません。`git stash` で作業中の変更を一時退避してツリーをきれいにし、対応が終わった想定で `git stash pop` を使って書きかけの変更を元に戻してください。",
+    hint: "コミットするほどでもない書きかけの変更は `git stash` で退避できます。割り込み作業が済んだら `git stash pop` で元の状態へ戻します。",
     answer: ["git stash", "git stash pop"],
     explanation:
-      "`git stash` は未コミットの変更を一時保存し、作業ツリーを clean に近い状態へ戻します。`git stash pop` はその保存内容を戻し、戻せた stash を一覧から取り除きます。急なブランチ切り替え前の退避に便利ですが、戻す時に衝突することがあります。",
+      "作業の途中で別のブランチに切り替えたい、急ぎの修正を挟みたい——でもまだコミットできる状態じゃない。そんなときに使うのが `git stash` です。未コミットの変更を一時保存し、作業ツリーを clean に近い状態へ戻すので、安心して他の作業に移れます。`git stash pop` はその保存内容を戻し、戻せた stash を一覧から取り除きます。割り込み対応のあとに書きかけを再開する、という実務でよくある流れを支える定番テクニックです。ただし戻す時に衝突することがある点には注意します。",
     conditions: [
       { id: "drill18.workingDiff", label: "作業ツリーに編集が戻っている", kind: "state" },
       { id: "drill18.stashUsed", label: "git stash を実行した", kind: "action" },
@@ -258,7 +258,7 @@ export const drills = [
   {
     id: 19,
     title: "リリースタグ",
-    prompt: "`v1.0.0` タグを打ってください。ヒント: `git tag v1.0.0`。",
+    prompt: "リリースした地点を後から正確に参照できるよう、今のコミットに `v1.0.0` という目印（タグ）を付けてください。",
     hint: "現在のコミットに軽量タグを付けるには `git tag タグ名` を使います。",
     answer: ["git tag v1.0.0"],
     explanation:
