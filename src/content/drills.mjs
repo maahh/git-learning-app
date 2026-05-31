@@ -6,7 +6,7 @@ export const drills = [
   {
     id: 1,
     title: "最初のコミット",
-    prompt: "README.md を作り、最初のコミットをしてください。必要なら `git init` から始めます。",
+    prompt: "README.md を作り、最初のコミットをしてください。まだ Git 管理下でなければ初期化から始めます。",
     hint: "`git init -b main` でリポジトリを作り、`git add` してから `git commit` します。",
     answer: [
       "git init -b main",
@@ -121,7 +121,7 @@ export const drills = [
   {
     id: 9,
     title: "ブランチ改名",
-    prompt: "今いる wip ブランチの名前を develop に変えてください。ヒント: `git branch -m`。",
+    prompt: "wip という仮の名前で作業していましたが、内容が固まったので develop に改名したいです。今いる wip ブランチの名前を develop に変えてください。",
     hint: "今いるブランチの名前は `git branch -m 新しい名前` で変更できます。",
     answer: ["git branch -m develop"],
     explanation:
@@ -160,8 +160,8 @@ export const drills = [
   {
     id: 12,
     title: "衝突解決",
-    prompt: "`git merge feature` で衝突を起こし、README.md を解決してコミットしてください。",
-    hint: "衝突後はファイルから `<<<<<<<` などのマーカーを消し、`git add` してコミットします。",
+    prompt: "feature を取り込もうとすると README.md で衝突します。衝突を解決して、マージを完了（コミット）させてください。",
+    hint: "まず feature をマージして衝突を起こします。ファイルから `<<<<<<<` などのマーカーを消し、`git add` してコミットすれば解決完了です。",
     answer: [
       "git merge feature",
       "git status",
@@ -180,7 +180,7 @@ export const drills = [
   {
     id: 13,
     title: "ブランチ削除",
-    prompt: "main にマージ済みの feature ブランチを削除してください。ヒント: `git branch -d feature`。",
+    prompt: "feature ブランチは main にマージ済みで、もう不要になりました。安全に削除してください。",
     hint: "マージ済みブランチは `git branch -d ブランチ名` で安全に削除できます。",
     answer: ["git branch -d feature"],
     explanation:
@@ -193,7 +193,7 @@ export const drills = [
   {
     id: 14,
     title: "変更を破棄",
-    prompt: "README.md の編集を破棄し、HEAD の状態に戻してください。ヒント: `git restore`。",
+    prompt: "README.md でいろいろ試した編集が不要になりました。未ステージの編集を破棄して、HEAD の状態に戻してください。",
     hint: "`git restore ファイル名` はステージしていない作業ツリーの変更を破棄します。",
     answer: ["git status", "git restore README.md"],
     explanation:
@@ -206,7 +206,7 @@ export const drills = [
   {
     id: 15,
     title: "ステージ取り消し",
-    prompt: "README.md の中身は残したまま、ステージだけ取り消してください。ヒント: `git restore --staged`。",
+    prompt: "README.md を add しましたが、まだコミットには含めたくありません。中身は残したまま、ステージだけ取り消してください。",
     hint: "`git restore --staged` はファイル内容を残したままインデックスから外します。",
     answer: ["git status", "git restore --staged README.md"],
     explanation:
@@ -245,7 +245,7 @@ export const drills = [
   {
     id: 18,
     title: "作業を退避",
-    prompt: "README.md を書きかけのまま、急ぎのバグ対応を別で頼まれました。この中途半端な変更はまだコミットしたくありません。`git stash` で作業中の変更を一時退避してツリーをきれいにし、対応が終わった想定で `git stash pop` を使って書きかけの変更を元に戻してください。",
+    prompt: "README.md を書きかけのまま、急ぎのバグ対応を別で頼まれました。この中途半端な変更はまだコミットしたくありません。作業中の変更をいったん退避して作業ツリーをきれいにし、対応が終わった想定で、退避した書きかけの変更を元に戻してください。",
     hint: "コミットするほどでもない書きかけの変更は `git stash` で退避できます。割り込み作業が済んだら `git stash pop` で元の状態へ戻します。",
     answer: ["git stash", "git stash pop"],
     explanation:
