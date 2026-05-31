@@ -195,9 +195,9 @@ export const drills = [
     title: "変更を破棄",
     prompt: "README.md の編集を破棄し、HEAD の状態に戻してください。ヒント: `git restore`。",
     hint: "`git restore ファイル名` はステージしていない作業ツリーの変更を破棄します。",
-    answer: ["git restore README.md"],
+    answer: ["git status", "git restore README.md"],
     explanation:
-      "`git restore README.md` は README.md の未ステージ変更を HEAD の内容に戻します。コミット済みの状態を基準に作業ツリーだけを戻すため、不要な試行錯誤を捨てる目的に合っています。消した変更は基本的に戻しにくいので、必要な内容がないか確認してから使います。",
+      "まず `git status` で README.md に未ステージ変更があることを確認します。`git restore README.md` は README.md の未ステージ変更を HEAD の内容に戻します。消した変更は基本的に戻しにくいため、状態を確認してから不要な試行錯誤だけを捨てます。",
     conditions: [
       { id: "drill14.clean", label: "作業ツリーが clean", kind: "state" },
       { id: "drill14.commit", label: "1つ以上のコミットがある", kind: "state" },
@@ -208,9 +208,9 @@ export const drills = [
     title: "ステージ取り消し",
     prompt: "README.md の中身は残したまま、ステージだけ取り消してください。ヒント: `git restore --staged`。",
     hint: "`git restore --staged` はファイル内容を残したままインデックスから外します。",
-    answer: ["git restore --staged README.md"],
+    answer: ["git status", "git restore --staged README.md"],
     explanation:
-      "`git restore --staged README.md` は README.md をステージから外しますが、作業ツリーの編集内容はそのまま残します。コミット対象から一度外して見直したい時に、編集を失わずに状態だけ戻せるのが正解です。ステージと作業ツリーは別物だと理解すると安全に使えます。",
+      "まず `git status` で README.md がステージされていることを確認します。`git restore --staged README.md` は README.md をステージから外しますが、作業ツリーの編集内容はそのまま残します。ステージと作業ツリーは別物なので、確認してからコミット対象だけを外すと安全です。",
     conditions: [
       { id: "drill15.noCachedDiff", label: "ステージされた変更がない", kind: "state" },
       { id: "drill15.workingDiff", label: "作業ツリーには README.md の変更が残っている", kind: "state" },
@@ -234,9 +234,9 @@ export const drills = [
     title: "HEADを戻す(soft)",
     prompt: "`git reset --soft HEAD~1` で1つ前に戻し、変更はステージに残してください。",
     hint: "`--soft` は HEAD だけを戻し、取り消したコミットの内容をステージに残します。",
-    answer: ["git reset --soft HEAD~1"],
+    answer: ["git status", "git reset --soft HEAD~1"],
     explanation:
-      "`git reset --soft HEAD~1` は HEAD だけを1つ前のコミットへ戻し、直前コミットの変更はステージに残します。コミットを作り直したいが、変更内容やステージ状態は保ちたい場合に合っています。共有前のローカル履歴を整える用途に向いた操作です。",
+      "まず `git status` で作業ツリーとステージの状態を確認します。`git reset --soft HEAD~1` は HEAD だけを1つ前のコミットへ戻し、直前コミットの変更はステージに残します。reset は履歴の先端を動かすため、現在の状態を見てから共有前のローカル履歴を整えます。",
     conditions: [
       { id: "drill17.oneCommit", label: "コミット数が1つに戻っている", kind: "state" },
       { id: "drill17.staged", label: "ステージに変更が残っている", kind: "state" },
