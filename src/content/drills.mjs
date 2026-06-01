@@ -252,7 +252,7 @@ export const drills = [
       "作業の途中で別のブランチに切り替えたい、急ぎの修正を挟みたい——でもまだコミットできる状態じゃない。そんなときに使うのが `git stash` です。未コミットの変更を一時保存し、作業ツリーを clean に近い状態へ戻すので、安心して他の作業に移れます。`git stash pop` はその保存内容を戻し、戻せた stash を一覧から取り除きます。割り込み対応のあとに書きかけを再開する、という実務でよくある流れを支える定番テクニックです。ただし戻す時に衝突することがある点には注意します。",
     conditions: [
       { id: "drill18.workingDiff", label: "作業ツリーに編集が戻っている", kind: "state" },
-      { id: "drill18.stashUsed", label: "git stash を実行した", kind: "action" },
+      { id: "drill18.stashUsed", label: "変更を退避した", kind: "action" },
     ],
   },
   {
