@@ -588,7 +588,16 @@ server.on("upgrade", async (req, socket, head) => {
 
   try {
     const target = parseTrackTarget(requestUrl);
-    await ensureTrackSandbox(target);
+    // ドリルは練習問題なので、開く（＝新しい pty を張る）たびに定義された初期状態へ戻す。
+    // これにより一度解いたドリルを再訪したとき「最初から達成済み」になるのを防ぐ。
+    // 章（解説）は学習の続きを保ちたいので従来どおり永続させる。
+    // シェルは handleUpgrade 後（このリセット完了後）に起動するため、作業中ディレクトリを
+    // 消す競合は起きない。クライアントは自動再接続しないので、リセットは1回の訪問につき1回。
+    if (target.track === "drill") {
+      await resetTrackSandbox(target);
+    } else {
+      await ensureTrackSandbox(target);
+    }
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit("connection", ws, req, target);
     });

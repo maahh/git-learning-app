@@ -46,6 +46,9 @@ export default function DrillClient({ drill }: DrillClientProps) {
   const drillContent = getDrill(drill);
   const terminalRef = useRef<TerminalHandle | null>(null);
   const wasCompleteRef = useRef(false);
+  // 未達成状態を一度でも観測したか。開いた直後にサーバーのリセットが伝わる前の
+  // stale な状態（前回解いた達成済み）を「完了」と誤判定しないためのガード。
+  const sawIncompleteRef = useRef(false);
   const [state, setState] = useState<DrillState | null>(null);
   const [terminalMountKey, setTerminalMountKey] = useState(0);
   const [showToast, setShowToast] = useState(false);
@@ -75,6 +78,7 @@ export default function DrillClient({ drill }: DrillClientProps) {
   useEffect(() => {
     setState(null);
     wasCompleteRef.current = false;
+    sawIncompleteRef.current = false;
     setLastDrill(drill);
     void loadState();
     const id = window.setInterval(() => {
@@ -85,16 +89,20 @@ export default function DrillClient({ drill }: DrillClientProps) {
   }, [drill, loadState]);
 
   useEffect(() => {
-    if (isComplete && !wasCompleteRef.current) {
+    if (!isComplete) {
+      sawIncompleteRef.current = true;
+      wasCompleteRef.current = false;
+      return undefined;
+    }
+
+    // 未達成を一度も見ていない＝開いた直後の stale 状態の可能性があるため完了扱いしない。
+    // リセット後の本物の達成（未達成→達成の遷移）だけをカウントする。
+    if (sawIncompleteRef.current && !wasCompleteRef.current) {
       wasCompleteRef.current = true;
       markDrillCompleted(drill);
       setShowToast(true);
       const id = window.setTimeout(() => setShowToast(false), 2000);
       return () => window.clearTimeout(id);
-    }
-
-    if (!isComplete) {
-      wasCompleteRef.current = false;
     }
 
     return undefined;
